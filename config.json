@@ -1,0 +1,16 @@
+{
+	"server": {
+		"listen_address": "0.0.0.0",
+		"listen_port": 80,
+		"secret_key": "the quick brown fox jumps over the lazy dog",
+		"database": "sqlite:///lxcwebpanel.db",
+		"tokens_timeout": 10000,
+		"debug": true
+	},
+
+	"client": {
+		"index": "templates/index.html",
+		"theme": null,
+		"default_lang": "en_US",
+	}
+}

@@ -1,0 +1,3 @@
+[submodule "flask_lwp_permissions"]
+	path = flask_lwp_permissions
+	url = https://github.com/googley/flask_lwp_permissions.git
