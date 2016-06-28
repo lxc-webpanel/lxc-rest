@@ -1,5 +1,6 @@
-# LXC RESTful API
-REST API for LXC and LXC WEB PANEL
+![LXC Web Panel](https://raw.githubusercontent.com/lxc-webpanel/lxc-webpanel.github.com/master/img/logo-2016-readme.png)
+
+RESTful API for LXC and LXC WEB PANEL
 
 ## Install
 ```
