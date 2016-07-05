@@ -2,8 +2,9 @@
 
 RESTful API for LXC and LXC WEB PANEL
 
-## Install
+## Requirements
 ```
+apt install python3-lxc
 pip install flask==0.10
 pip install Flask-SQLAlchemy
 ```
