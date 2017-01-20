@@ -2,41 +2,18 @@
 
 RESTful API for LXC and LXC WEB PANEL
 
-## Requirements
+**ALPHA**
+*Do not run it in production*
+
+## Installation
 ```
 apt install python3-lxc
-pip install flask==0.10
-pip install Flask-SQLAlchemy
 ```
 
-## Run
 ```
-python3 server.py
-```
-
-## Auth 
-> **POST** /api/v1/auth
->> Headers: `Content-Type: application/json`
-
->> Body:
-```
-{
-  "username" : "admin",
-  "password" : "admin"
-}
+pip install -r requirements.txt
+python3 run.py
 ```
 
-## Usage
-> **GET/POST/PUT/DELETE** /api/v1/\<route\>
->> Headers:
-```
-Content-Type: application/json
-Authorization: Bearer <auth key>
-```
-
->> Body:
-```
-{
-  "foo" : "bar"
-}
-```
+## Documentation
+http://<lxc-webpanel server>/doc/
