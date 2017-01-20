@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import lxc
 import platform
 import re
@@ -31,25 +33,29 @@ def ct_infos(container):
     networks = []
     memory_usage = 0
 
-    # Try to get memory limit by cgroup (started container) or by config (not always set)
+    # Try to get memory limit by cgroup (started container) or by config (not
+    # always set)
     try:
         memory_limit = int(c.get_cgroup_item('memory.limit_in_bytes'))
         if memory_limit == 18446744073709551615:
             memory_limit = -1
         else:
-            memory_limit = memory_limit/1048576
+            memory_limit = memory_limit / 1048576
     except KeyError:
         try:
-            memory_limit = int(c.get_config_item('lxc.cgroup.memory.limit_in_bytes')[0])/1048576
+            memory_limit = int(c.get_config_item(
+                'lxc.cgroup.memory.limit_in_bytes')[0]) / 1048576
         except IndexError:
             memory_limit = -1
 
     # Get swap limit
     try:
-        swap_limit = int(c.get_cgroup_item('memory.memsw.limit_in_bytes'))/1048576
+        swap_limit = int(c.get_cgroup_item(
+            'memory.memsw.limit_in_bytes')) / 1048576
     except KeyError:
         try:
-            swap_limit = int(c.get_config_item('lxc.cgroup.memory.memsw.limit_in_bytes')[0])/1048576
+            swap_limit = int(c.get_config_item(
+                'lxc.cgroup.memory.memsw.limit_in_bytes')[0]) / 1048576
         except IndexError:
             swap_limit = -1
 
@@ -77,24 +83,24 @@ def ct_infos(container):
     except IndexError:
         groups = []
 
-
     if state == 'RUNNING':
         interfaces = c.get_interfaces()
         ips = c.get_ips()
 
-        for i in range(0, len(c.get_interfaces())-1):
+        for i in range(0, len(c.get_interfaces()) - 1):
             networks.append({'interface': interfaces[i], 'address': ips[i]})
-        sorted_dict=1
+        sorted_dict = 1
 
     if state == 'FROZEN':
-        sorted_dict=2
+        sorted_dict = 2
 
     if state == 'STOPPED':
-        sorted_dict=3
+        sorted_dict = 3
 
     if re.match('RUNNING|FROZEN', state):
         # CT memory usage in MB
-        memory_usage = int(c.get_cgroup_item('memory.usage_in_bytes'))/1048576
+        memory_usage = int(c.get_cgroup_item(
+            'memory.usage_in_bytes')) / 1048576
 
     return dict(name=c.name,
                 hostname=c.get_config_item('lxc.utsname'),
@@ -207,13 +213,13 @@ def host_memory_usage():
     out.close()
     used = (total - (free + buffers + cached))
     swap_used = (swap_total - (swap_free + swap_cached))
-    return {'percent': int(used*100/total),
-            'percent_cached': int(cached*100/total),
-            'swap_percent': int(swap_used*100/swap_total),
-            'swap_used': int(swap_used/1024),
-            'swap_total': int(swap_total/1024),
-            'used': int(used/1024),
-            'total': int(total/1024)}
+    return {'percent': int(used * 100 / total),
+            'percent_cached': int(cached * 100 / total),
+            'swap_percent': int(swap_used * 100 / swap_total),
+            'swap_used': int(swap_used / 1024),
+            'swap_total': int(swap_total / 1024),
+            'used': int(used / 1024),
+            'total': int(total / 1024)}
 
 
 def host_uptime():
@@ -249,13 +255,13 @@ def get_templates_list():
     if os.path.exists(templates_path) and os.path.isdir(templates_path):
         path = os.listdir(templates_path)
     else:
-        templates_path = '/usr/lib/lxc/templates' # Compat
+        templates_path = '/usr/lib/lxc/templates'  # Compat
         if os.path.exists(templates_path) and os.path.isdir(templates_path):
             path = os.listdir(templates_path)
 
     if path:
         for line in path:
-                templates.append(line.replace('lxc-', ''))
+            templates.append(line.replace('lxc-', ''))
 
     return sorted(templates)
 
@@ -265,11 +271,11 @@ def get_template_options(template):
     Get lxc template options: arch & releases
     '''
     result = {
-        "arch" : [],
-        "releases" : [],
-        "system" : {
-            "arch" : platform.machine(),
-            "release" : platform.linux_distribution()[2],
+        "arch": [],
+        "releases": [],
+        "system": {
+            "arch": platform.machine(),
+            "release": platform.linux_distribution()[2],
         }
     }
 
@@ -287,9 +293,11 @@ def get_template_options(template):
 
     if config.has_section(template):
         if config.has_option(template, 'releases'):
-            result['releases'].extend( config.get(template, 'releases').split(',') )
+            result['releases'].extend(config.get(
+                template, 'releases').split(','))
     elif config.has_section('default'):
         if config.has_option('default', 'releases'):
-            result['releases'].extend( config.get('default', 'releases').split(',') )
+            result['releases'].extend(config.get(
+                'default', 'releases').split(','))
 
     return result
