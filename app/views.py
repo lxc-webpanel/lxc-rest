@@ -82,7 +82,7 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'error': "User not found"}, 404
+            return {'errors': "User not found"}, 404
 
         return user
 
@@ -93,7 +93,7 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'error': "User not found"}, 404
+            return {'errors': "User not found"}, 404
 
         args = users_parser.parse_args()
 
@@ -118,7 +118,7 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'error': "User not found"}, 404
+            return {'errors': "User not found"}, 404
 
         db.session.delete(user)
         db.session.commit()
@@ -171,6 +171,7 @@ groups_list_parser = api.parser()
 groups_list_parser.add_argument(
     'name', type=str, required=True, location='json')
 groups_list_parser.add_argument('abilities', type=list, location='json')
+groups_list_parser.add_argument('users', type=list, location='json')
 
 
 class GroupsList(Resource):
@@ -183,14 +184,16 @@ class GroupsList(Resource):
 
     @user_has('groups_create')
     @api.expect(groups_fields_post)
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(groups_fields, envelope='data')
     def post(self):
         args = groups_list_parser.parse_args()
 
         group = Role(name=args.name)
 
         if args.abilities:
-            group.abilities = abilities
+            group.abilities = args.abilities
+        if args.users:
+            group.users = args.users
 
         db.session.add(group)
         db.session.commit()
@@ -201,24 +204,25 @@ class GroupsList(Resource):
 groups_parser = api.parser()
 groups_parser.add_argument('name', type=str, location='json')
 groups_parser.add_argument('abilities', type=list, location='json')
+groups_parser.add_argument('users', type=list, location='json')
 
 
 class Groups(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos')
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(groups_fields, envelope='data')
     def get(self, id):
         group = Role.query.get(id)
 
         if not group:
-            return {'error': "Group not found"}, 404
+            return {'errors': "Group not found"}, 404
 
         return group
 
     @user_has('groups_update')
     @api.expect(groups_fields_put)
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(groups_fields, envelope='data')
     def put(self, id):
         group = Role.query.get(id)
 
@@ -228,6 +232,8 @@ class Groups(Resource):
             group.name = args.name
         if args.abilities:
             group.abilities = args.abilities
+        if args.users:
+            group.users = args.users
 
         if len(args) > 0:
             db.session.commit()
@@ -255,6 +261,39 @@ class AbilitiesList(Resource):
     def get(self):
         return Ability.query.all()
 
+
+abilities_parser = api.parser()
+abilities_parser.add_argument('roles', type=list, location='json')
+
+
+class Abilities(Resource):
+    decorators = [jwt_required()]
+
+    @user_has('abilities_infos')
+    @api.marshal_with(abilities_fields, envelope='data')
+    def get(self, id):
+        ability = Ability.query.get(id)
+
+        if not ability:
+            return {'errors': "Ability not found"}, 404
+
+        return ability
+
+    @user_has('abilities_update')
+    @api.expect(abilities_fields_put)
+    @api.marshal_with(abilities_fields, envelope='data')
+    def put(self, id):
+        ability = Ability.query.get(id)
+
+        args = abilities_parser.parse_args()
+
+        if args.roles:
+            ability.roles = args.roles
+
+        if len(args) > 0:
+            db.session.commit()
+
+        return ability
 
 ###########
 # LXC API #
@@ -316,12 +355,12 @@ class ContainersList(Resource):
 
         if not c.defined:
             if not c.create(template=args.template, args=args.args):
-                return {'error': 'Can\'t create container %s!'
+                return {'errors': 'Can\'t create container %s!'
                                  % args.name}, 500
             db.session.commit()
             return Containers.get(self, args.name), 201
 
-        return {'error': 'Container %s already exists!' % args.name}, 409
+        return {'errors': 'Container %s already exists!' % args.name}, 409
 
 
 class Containers(Resource):
@@ -338,7 +377,7 @@ class Containers(Resource):
         if c.defined and container in current_identity.containers:
             return lwp.ct_infos(container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}
+        return {'errors': 'Container %s doesn\'t exists!' % container}
 
     @user_has('ct_update')
     def put(self, container):
@@ -362,7 +401,7 @@ class Containers(Resource):
         if c.defined and container in current_identity.containers:
             if args.name and args.name != c.name:
                 if not c.rename(args.name):
-                    return {'error': 'Can\'t rename container %s to %s!'
+                    return {'errors': 'Can\'t rename container %s to %s!'
                                      % (container, args.name)}
 
                 container = args.name
@@ -370,49 +409,49 @@ class Containers(Resource):
 
             if args.hostname:
                 if not c.set_config_item("lxc.utsname", args.hostname):
-                    return {'error': 'Can\'t update hostname for %s to %s!'
+                    return {'errors': 'Can\'t update hostname for %s to %s!'
                             % (container, args.hostname)}, 500
 
             if args.memory_limit:
                 # Convert MB to B
                 if not c.set_config_item("lxc.cgroup.memory.limit_in_bytes", str(args.memory_limit * 1048576)):
-                    return {'error': 'Can\'t update memory limit for %s to %s!'
+                    return {'errors': 'Can\'t update memory limit for %s to %s!'
                             % (container, args.memory_limit)}, 500
 
             if args.swap_limit:
                 # Convert MB to B
                 if not c.set_config_item("lxc.cgroup.memory.memsw.limit_in_bytes", str(args.swap_limit * 1048576)):
-                    return {'error': 'Can\'t update swap limit for %s to %s!'
+                    return {'errors': 'Can\'t update swap limit for %s to %s!'
                             % (container, args.memory_limit)}, 500
 
             if args.start_auto:
                 if not c.set_config_item("lxc.start.auto", args.start_auto):
-                    return {'error': 'Can\'t set start auto for %s to %s!'
+                    return {'errors': 'Can\'t set start auto for %s to %s!'
                             % (container, args.start_auto)}, 500
 
             if args.start_delay:
                 if not c.set_config_item("lxc.start.delay", args.start_delay):
-                    return {'error': 'Can\'t set start delay for %s to %s!'
+                    return {'errors': 'Can\'t set start delay for %s to %s!'
                             % (container, args.start_delay)}, 500
 
             if args.start_order:
                 if not c.set_config_item("lxc.start.order", args.start_order):
-                    return {'error': 'Can\'t set start order for %s to %s!'
+                    return {'errors': 'Can\'t set start order for %s to %s!'
                             % (container, args.start_order)}, 500
 
             if args.groups:
                 if not c.set_config_item("lxc.group", args.groups):
-                    return {'error': 'Can\'t set group for %s to %s!'
+                    return {'errors': 'Can\'t set group for %s to %s!'
                             % (container, args.groups)}, 500
 
             if args.cpu_shares:
                 if not c.set_config_item("lxc.cpu.shares", args.cpu_shares):
-                    return {'error': 'Can\'t set cpu shares for %s to %s!'
+                    return {'errors': 'Can\'t set cpu shares for %s to %s!'
                             % (container, args.cpu_shares)}, 500
 
             if args.cpus:
                 if not c.set_config_item("lxc.cpuset.cpus", args.cpus):
-                    return {'error': 'Can\'t set start auto for %s to %s!'
+                    return {'errors': 'Can\'t set start auto for %s to %s!'
                             % (container, args.cpus)}, 500
 
             if args.name or args.hostname or args.memory_limit:
@@ -420,7 +459,7 @@ class Containers(Resource):
 
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
     @user_has('ct_delete')
     def delete(self, container):
@@ -429,14 +468,14 @@ class Containers(Resource):
         if c.defined and container in current_identity.containers:
             if c.running:
                 if not c.stop():
-                    return {'error': 'Can\'t stop container %s!'
+                    return {'errors': 'Can\'t stop container %s!'
                                      % container}, 409
             if not c.destroy():
-                return {'error': 'Can\'t destroy container %s!'
+                return {'errors': 'Can\'t destroy container %s!'
                                  % container}, 409
             return {'success': 'Container %s destroyed successfully!' % container}, 200
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersStart(Resource):
@@ -451,7 +490,7 @@ class ContainersStart(Resource):
             c.wait('RUNNING', 3)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersFreeze(Resource):
@@ -466,7 +505,7 @@ class ContainersFreeze(Resource):
             c.wait('FROZEN', 3)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersUnfreeze(Resource):
@@ -481,7 +520,7 @@ class ContainersUnfreeze(Resource):
             c.wait('RUNNING', 3)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersStop(Resource):
@@ -496,7 +535,7 @@ class ContainersStop(Resource):
             c.wait('STOPPED', 3)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersShutdown(Resource):
@@ -515,7 +554,7 @@ class ContainersShutdown(Resource):
             c.wait('STOPPED', 3)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class ContainersRestart(Resource):
@@ -530,7 +569,7 @@ class ContainersRestart(Resource):
             ContainersStart.post(self, container)
             return Containers.get(self, container)
 
-        return {'error': 'Container %s doesn\'t exists!' % container}, 404
+        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
 
 
 class LxcCheckConfig(Resource):

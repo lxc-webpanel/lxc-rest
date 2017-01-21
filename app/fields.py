@@ -27,7 +27,8 @@ users_fields = api.inherit('UsersModel', users_fields_put, {
 # Groups JSON fields
 groups_fields_put = api.model('GroupsModelPut', {
     'name': fields.String,
-    'abilities': fields.List(fields.Integer(min=1))
+    'abilities': fields.List(fields.Integer(min=1)),
+    'users': fields.List(fields.Integer(min=1))
 })
 
 groups_fields_post = api.inherit('GroupsModelPost', groups_fields_put, {
@@ -41,13 +42,10 @@ groups_fields = api.inherit('GroupsModel', groups_fields_put, {
 
 # Abilities JSON fields
 abilities_fields_put = api.model('AbilitiesModelPut', {
-    'name': fields.String,
-})
-
-abilities_fields_post = api.inherit('AbilitiesModelPost', abilities_fields_put, {
-    'name': fields.String(required=True)
+    'roles': fields.List(fields.Integer(min=1))
 })
 
 abilities_fields = api.inherit('AbilitiesModel', abilities_fields_put, {
-    'id': fields.Integer
+    'id': fields.Integer,
+    'name': fields.String
 })

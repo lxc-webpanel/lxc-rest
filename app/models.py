@@ -5,6 +5,11 @@ from app.exceptions import *
 from passlib.apps import custom_app_context as pwd_context
 from sqlalchemy.ext.associationproxy import association_proxy
 
+def _user_find(u):
+    user = User.query.get(u)
+    if not(user):
+        raise UserDoesntExist(u)
+    return user
 
 def _role_find(r):
     role = Role.query.get(r)
@@ -126,12 +131,6 @@ class User(db.Model):
     def verify_password(self, password):
         return pwd_context.verify(password, self.password)
 
-    def add_roles(self, *roles):
-        self.roles.extend([role for role in roles if role not in self.roles])
-
-    def remove_roles(self, *roles):
-        self.roles = [role for role in self.roles if role not in roles]
-
     def add_containers(self, *containers):
         self.containers.extend(
             [container for container in containers if container not in self.containers])
@@ -158,11 +157,22 @@ class Role(db.Model):
         'id',
         creator=_ability_find
     )
+    _users = db.relationship(
+        'Role',
+        secondary=user_role_table,
+    )
+    users = association_proxy(
+        '_users',
+        'id',
+        creator=_user_find
+    )
+
 
     def __init__(
         self,
         name=None,
-        abilities=None
+        abilities=None,
+        users=None
     ):
 
         self.name = name
@@ -172,13 +182,10 @@ class Role(db.Model):
         elif abilities and isinstance(abilities, int):
             self.abilities = [abilities]
 
-    def add_abilities(self, *abilities):
-        self.abilities.extend(
-            [ability for ability in abilities if ability not in self.abilities])
-
-    def remove_abilities(self, *abilities):
-        self.abilities = [
-            ability for ability in self.abilities if ability not in abilities]
+        if users and isinstance(users, list):
+            self.users = [user for user in users]
+        elif users and isinstance(users, int):
+            self.users = [users]
 
     def __repr__(self):
         return '<Role %r>' % self.id
@@ -188,13 +195,28 @@ class Ability(db.Model):
     __tablename__ = 'abilities'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30), unique=True)
+    _roles = db.relationship(
+        'Role',
+        secondary=role_ability_table
+    )
+    roles = association_proxy(
+        '_roles',
+        'id',
+        creator=_role_find
+    )
 
     def __init__(
         self,
-        name=None
+        name=None,
+        roles=None
     ):
 
         self.name = name
+
+        if roles and isinstance(roles, list):
+            self.roles = [role for role in roles]
+        elif roles and isinstance(roles, int):
+            self.roles = [roles]
 
     def __repr__(self):
         return '<Ability %r>' % self.id
@@ -204,13 +226,28 @@ class Container(db.Model):
     __tablename__ = 'containers'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True)
+    _users = db.relationship(
+        'User',
+        secondary=user_container_table,
+    )
+    users = association_proxy(
+        '_users',
+        'id',
+        creator=_user_find
+    )
 
     def __init__(
         self,
-        name=None
+        name=None,
+        users=None
     ):
 
         self.name = name
+
+        if users and isinstance(users, list):
+            self.users = [user for user in users]
+        elif users and isinstance(users, int):
+            self.users = [users]
 
     def __repr__(self):
         return '<Container %r>' % self.id

@@ -31,6 +31,10 @@ def _run():
     db.session.add(ability)
     ability = Ability(name='abilities_infos_all')
     db.session.add(ability)
+    ability = Ability(name='abilities_infos')
+    db.session.add(ability)
+    ability = Ability(name='abilities_update')
+    db.session.add(ability)
     ability = Ability(name='ct_infos')
     db.session.add(ability)
     ability = Ability(name='ct_create')
@@ -63,7 +67,7 @@ def _run():
     role = Role(
         name='admin',
         abilities=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-                   13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+                   13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
     )
 
     role2 = Role(
