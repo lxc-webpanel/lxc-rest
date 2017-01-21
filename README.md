@@ -2,13 +2,16 @@
 
 RESTful API for LXC and LXC WEB PANEL
 
+[![Python version](https://img.shields.io/badge/Python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
+
 **ALPHA**
 *Do not run it in production*
 
 ## Installation
 ```
 apt install python3-lxc
-git submodule update --init
+git clone --recursive https://github.com/lxc-webpanel/lxc-rest.git
+cd lxc-rest
 pip install -r requirements.txt
 python3 run.py
 ```
