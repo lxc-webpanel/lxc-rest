@@ -11,11 +11,11 @@ def _user_find(u):
         raise UserDoesntExist(u)
     return user
 
-def _role_find(r):
-    role = Role.query.get(r)
-    if not(role):
-        raise RoleDoesntExist(r)
-    return role
+def _group_find(g):
+    group = Group.query.get(g)
+    if not(group):
+        raise GroupDoesntExist(g)
+    return group
 
 
 def _ability_find(a):
@@ -32,26 +32,26 @@ def _container_find(c):
     return container
 
 
-user_role_table = db.Table(
-    'user_role',
+user_group_table = db.Table(
+    'user_group',
     db.Column(
         'user_id',
         db.Integer,
         db.ForeignKey('users.id')
     ),
     db.Column(
-        'role_id',
+        'group_id',
         db.Integer,
-        db.ForeignKey('roles.id')
+        db.ForeignKey('groups.id')
     )
 )
 
-role_ability_table = db.Table(
-    'role_ability',
+group_ability_table = db.Table(
+    'group_ability',
     db.Column(
-        'role_id',
+        'group_id',
         db.Integer,
-        db.ForeignKey('roles.id')
+        db.ForeignKey('groups.id')
     ),
     db.Column(
         'ability_id',
@@ -82,14 +82,14 @@ class User(db.Model):
     username = db.Column(db.String(60), unique=True)
     email = db.Column(db.String(120))
     password = db.Column(db.String(100))
-    _roles = db.relationship(
-        'Role',
-        secondary=user_role_table,
+    _groups = db.relationship(
+        'Group',
+        secondary=user_group_table,
     )
-    roles = association_proxy(
-        '_roles',
+    groups = association_proxy(
+        '_groups',
         'id',
-        creator=_role_find
+        creator=_group_find
     )
     _containers = db.relationship(
         'Container',
@@ -107,7 +107,7 @@ class User(db.Model):
         username=None,
         email=None,
         password=None,
-        roles=None,
+        groups=None,
         containers=None
     ):
 
@@ -116,10 +116,10 @@ class User(db.Model):
         self.email = email
         self.password = password
 
-        if roles and isinstance(roles, list):
-            self.roles = [role for role in roles]
-        elif roles and isinstance(roles, int):
-            self.roles = [roles]
+        if groups and isinstance(groups, list):
+            self.groups = [group for group in groups]
+        elif groups and isinstance(groups, int):
+            self.groups = [groups]
         if containers and isinstance(containers, list):
             self.containers = [container for container in containers]
         elif containers and isinstance(containers, int):
@@ -144,13 +144,13 @@ class User(db.Model):
         return '<User %r>' % self.id
 
 
-class Role(db.Model):
-    __tablename__ = 'roles'
+class Group(db.Model):
+    __tablename__ = 'groups'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True)
     _abilities = db.relationship(
         'Ability',
-        secondary=role_ability_table
+        secondary=group_ability_table
     )
     abilities = association_proxy(
         '_abilities',
@@ -158,8 +158,8 @@ class Role(db.Model):
         creator=_ability_find
     )
     _users = db.relationship(
-        'Role',
-        secondary=user_role_table,
+        'User',
+        secondary=user_group_table,
     )
     users = association_proxy(
         '_users',
@@ -188,35 +188,35 @@ class Role(db.Model):
             self.users = [users]
 
     def __repr__(self):
-        return '<Role %r>' % self.id
+        return '<Group %r>' % self.id
 
 
 class Ability(db.Model):
     __tablename__ = 'abilities'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30), unique=True)
-    _roles = db.relationship(
-        'Role',
-        secondary=role_ability_table
+    _groups = db.relationship(
+        'Group',
+        secondary=group_ability_table
     )
-    roles = association_proxy(
-        '_roles',
+    groups = association_proxy(
+        '_groups',
         'id',
-        creator=_role_find
+        creator=_group_find
     )
 
     def __init__(
         self,
         name=None,
-        roles=None
+        groups=None
     ):
 
         self.name = name
 
-        if roles and isinstance(roles, list):
-            self.roles = [role for role in roles]
-        elif roles and isinstance(roles, int):
-            self.roles = [roles]
+        if groups and isinstance(groups, list):
+            self.groups = [group for group in groups]
+        elif groups and isinstance(groups, int):
+            self.groups = [groups]
 
     def __repr__(self):
         return '<Ability %r>' % self.id

@@ -11,7 +11,7 @@ class UserDoesntExist(Exception):
         return repr(self.value)
 
 
-class RoleDoesntExist(Exception):
+class GroupDoesntExist(Exception):
 
     def __init__(self, value):
         self.value = value

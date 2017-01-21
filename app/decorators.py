@@ -25,7 +25,7 @@ def user_has(ability, get_user=import_user):
                 name=ability).first()
             user_abilities = []
             current_identity = get_user()
-            for role in current_identity._roles:
+            for role in current_identity._groups:
                 user_abilities += role.abilities
             if desired_ability.id in user_abilities:
                 return func(*args, **kwargs)

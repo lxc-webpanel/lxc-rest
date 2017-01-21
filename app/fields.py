@@ -7,7 +7,7 @@ from app import api
 users_fields_put = api.model('UsersModelPut', {
     'name': fields.String,
     'email': fields.String,
-    'roles': fields.List(fields.Integer(min=1)),
+    'groups': fields.List(fields.Integer(min=1)),
     'containers': fields.List(fields.Integer(min=1)),
     'password': fields.String
 })
@@ -15,7 +15,7 @@ users_fields_put = api.model('UsersModelPut', {
 users_fields_post = api.inherit('UsersModelPost', users_fields_put, {
     'username': fields.String(required=True),
     'name': fields.String(required=True),
-    'roles': fields.List(fields.Integer(min=1), required=True),
+    'groups': fields.List(fields.Integer(min=1), required=True),
     'password': fields.String(required=True)
 })
 
@@ -42,7 +42,7 @@ groups_fields = api.inherit('GroupsModel', groups_fields_put, {
 
 # Abilities JSON fields
 abilities_fields_put = api.model('AbilitiesModelPut', {
-    'roles': fields.List(fields.Integer(min=1))
+    'groups': fields.List(fields.Integer(min=1))
 })
 
 abilities_fields = api.inherit('AbilitiesModel', abilities_fields_put, {

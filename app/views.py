@@ -23,7 +23,7 @@ users_list_parser.add_argument(
     'name', type=str, required=True, location='json')
 users_list_parser.add_argument('email', type=str, location='json')
 users_list_parser.add_argument(
-    'roles', type=list, required=True, location='json')
+    'groups', type=list, required=True, location='json')
 users_list_parser.add_argument('containers', type=list, location='json')
 users_list_parser.add_argument(
     'password', type=str, required=True, location='json')
@@ -50,7 +50,7 @@ class UsersList(Resource):
 
         user.username = args.username
         user.name = args.name
-        user.roles = args.roles
+        user.groups = args.groups
 
         if args.email:
             user.email = args.email
@@ -68,7 +68,7 @@ class UsersList(Resource):
 users_parser = api.parser()
 users_parser.add_argument('name', type=str, location='json')
 users_parser.add_argument('email', type=str, location='json')
-users_parser.add_argument('roles', type=list, location='json')
+users_parser.add_argument('groups', type=list, location='json')
 users_parser.add_argument('containers', type=list, location='json')
 users_parser.add_argument('password', type=str, location='json')
 
@@ -101,8 +101,8 @@ class Users(Resource):
             user.name = args.name
         if args.email:
             user.email = args.email
-        if args.roles:
-            user.roles = args.roles
+        if args.groups:
+            user.groups = args.groups
         if args.containers:
             user.containers = args.containers
         if args.password:
@@ -145,8 +145,8 @@ class Me(Resource):
             user.name = args.name
         if args.email:
             user.email = args.email
-        if args.roles:
-            user.roles = args.roles
+        if args.groups:
+            user.groups = args.groups
         if args.containers:
             user.containers = args.containers
         if args.password:
@@ -180,7 +180,7 @@ class GroupsList(Resource):
     @user_has('groups_infos_all')
     @api.marshal_with(groups_fields, envelope='data')
     def get(self):
-        return Role.query.all()
+        return Group.query.all()
 
     @user_has('groups_create')
     @api.expect(groups_fields_post)
@@ -188,7 +188,7 @@ class GroupsList(Resource):
     def post(self):
         args = groups_list_parser.parse_args()
 
-        group = Role(name=args.name)
+        group = Group(name=args.name)
 
         if args.abilities:
             group.abilities = args.abilities
@@ -213,7 +213,7 @@ class Groups(Resource):
     @user_has('groups_infos')
     @api.marshal_with(groups_fields, envelope='data')
     def get(self, id):
-        group = Role.query.get(id)
+        group = Group.query.get(id)
 
         if not group:
             return {'errors': "Group not found"}, 404
@@ -224,7 +224,7 @@ class Groups(Resource):
     @api.expect(groups_fields_put)
     @api.marshal_with(groups_fields, envelope='data')
     def put(self, id):
-        group = Role.query.get(id)
+        group = Group.query.get(id)
 
         args = groups_parser.parse_args()
 
@@ -242,7 +242,7 @@ class Groups(Resource):
 
     @user_has('groups_delete')
     def delete(self, id):
-        group = Role.query.get(id)
+        group = Group.query.get(id)
 
         if not group:
             return {'errors': 'Group not found'}, 404
@@ -263,7 +263,7 @@ class AbilitiesList(Resource):
 
 
 abilities_parser = api.parser()
-abilities_parser.add_argument('roles', type=list, location='json')
+abilities_parser.add_argument('groups', type=list, location='json')
 
 
 class Abilities(Resource):
@@ -287,8 +287,8 @@ class Abilities(Resource):
 
         args = abilities_parser.parse_args()
 
-        if args.roles:
-            ability.roles = args.roles
+        if args.groups:
+            ability.groups = args.groups
 
         if len(args) > 0:
             db.session.commit()

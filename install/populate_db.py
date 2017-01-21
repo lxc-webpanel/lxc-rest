@@ -64,13 +64,13 @@ def _run():
 
     db.session.commit()
 
-    role = Role(
+    role = Group(
         name='admin',
         abilities=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
                    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
     )
 
-    role2 = Role(
+    role2 = Group(
         name='test'
     )
 
@@ -81,7 +81,7 @@ def _run():
     user = User(
         name='John Doe',
         username='admin',
-        roles=[1, 2]
+        groups=[1, 2]
     )
 
     user.hash_password('admin')
@@ -91,7 +91,7 @@ def _run():
 
     # Test
     user = User.query.get(1)
-    user.roles = [1]
+    user.groups = [1]
     db.session.commit()
 
 if __name__ == '__main__':
