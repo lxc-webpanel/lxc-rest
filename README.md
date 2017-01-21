@@ -19,4 +19,5 @@ python3 run.py
 ```
 
 ## Documentation
-http://<lxc-webpanel server>/doc/
+
+* [**API**](http://petstore.swagger.io/?url=http://lxc-webpanel.github.io/doc/swagger.json)
