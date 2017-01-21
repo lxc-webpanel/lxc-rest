@@ -5,6 +5,10 @@ python: "3.5"
 sudo: required
 dist: trusty
 
+before_install:
+  - SITE_PKG_DIR=$VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages
+  - rm -f $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/no-global-site-packages.txt
+
 virtualenv:
   system_site_packages: true
 
@@ -15,8 +19,6 @@ addons:
     - build-essential
     - lxc
     - lxc-dev
-  hosts:
-    - lxc-webpanel
 
 script:
   - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
