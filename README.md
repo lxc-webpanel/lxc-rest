@@ -8,9 +8,7 @@ RESTful API for LXC and LXC WEB PANEL
 ## Installation
 ```
 apt install python3-lxc
-```
-
-```
+git submodule update --init
 pip install -r requirements.txt
 python3 run.py
 ```

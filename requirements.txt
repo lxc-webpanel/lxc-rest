@@ -1,6 +1,6 @@
 Flask==0.12
 Flask-Cors==3.0.2
 Flask-JWT==0.3.2
-flask-restplus==0.9.2
+pip/flask-restplus/
 Flask-SQLAlchemy==2.1
 passlib==1.7.0
