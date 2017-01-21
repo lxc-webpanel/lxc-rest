@@ -1,4 +1,4 @@
-[submodule "flask_restplus"]
-	path = flask_restplus
+[submodule "pip/flask-restplus"]
+	path = pip/flask-restplus
 	url = https://github.com/lxc-webpanel/flask-restplus.git
 	branch = 0.9.2-lwp-1
