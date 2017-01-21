@@ -4,7 +4,7 @@ from datetime import timedelta
 
 DEBUG = False
 SECRET_KEY = u'ça cest une vrai appli ! il faut que la clé soit bien longue'
-SQLALCHEMY_DATABASE_URI = 'sqlite:////root/lxc-webpanel.sqlite'
+SQLALCHEMY_DATABASE_URI = 'sqlite:///../lxc-webpanel.sqlite'
 SQLALCHEMY_COMMIT_ON_TEARDOWN = False
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
