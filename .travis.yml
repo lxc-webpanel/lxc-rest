@@ -5,10 +5,14 @@ python: "3.5"
 sudo: required
 dist: trusty
 
+addons:
+  apt:
+    packages:
+    - python3-pip
+    - lxc
+    - python3-lxc
+  hosts:
+    - lxc-webpanel
+
 script:
-  - sudo apt-get install python3-pip
-  - sudo apt-get install lxc
-  - sudo apt-get install python-lxc
-  - git submodule update --init
-  - pip install -r requirements.txt
   - python3 install/setup.py
