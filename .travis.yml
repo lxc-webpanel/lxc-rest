@@ -1,0 +1,24 @@
+---
+language: python
+python: "3.5"
+
+sudo: required
+dist: trusty
+
+# Install ansible
+addons:
+  apt:
+    packages:
+    - python3-pip
+    - lxc
+    - python-lxc
+  hosts:
+    - lxc-webpanel
+
+script:
+  - git submodule update --init
+  - pip install -r requirements.txt
+  - python3 install/setup.py
+
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/
