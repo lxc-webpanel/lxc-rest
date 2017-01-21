@@ -10,9 +10,10 @@ addons:
     packages:
     - python3-pip
     - lxc
-    - python3-lxc
+    - lxc-dev
   hosts:
     - lxc-webpanel
 
 script:
+  - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
   - python3 install/setup.py
