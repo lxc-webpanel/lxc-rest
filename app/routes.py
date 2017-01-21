@@ -9,6 +9,7 @@ nslwp.add_resource(Users, '/users/<int:id>')
 nslwp.add_resource(Me, '/me')
 nslwp.add_resource(GroupsList, '/groups')
 nslwp.add_resource(Groups, '/groups/<int:id>')
+nslwp.add_resource(AbilitiesList, '/abilities')
 
 # LXC templates routes
 # api.add_resource(LxcTemplatesList,

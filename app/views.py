@@ -247,6 +247,15 @@ class Groups(Resource):
         return {'message': 'Group %s deleted' % group.name}, 200
 
 
+class AbilitiesList(Resource):
+    decorators = [jwt_required()]
+
+    @user_has('abilities_infos_all')
+    @api.marshal_with(abilities_fields, envelope='data')
+    def get(self):
+        return Ability.query.all()
+
+
 ###########
 # LXC API #
 ###########
