@@ -14,6 +14,7 @@ apt install python3-lxc
 git clone --recursive https://github.com/lxc-webpanel/lxc-rest.git
 cd lxc-rest
 pip install -r requirements.txt
+python3 install/setup.py
 python3 run.py
 ```
 
