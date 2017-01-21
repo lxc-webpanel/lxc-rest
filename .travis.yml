@@ -6,9 +6,9 @@ sudo: required
 dist: trusty
 
 before_install:
-  - add-apt-repository ppa:ubuntu-lxc/stable
-  - apt-get update
-  - apt-get install lxc lxc-dev python3-lxc
+  - sudo add-apt-repository ppa:ubuntu-lxc/stable
+  - sudo apt-get update
+  - sudo apt-get install lxc lxc-dev python3-lxc
 
 addons:
   apt:
