@@ -298,6 +298,8 @@ class Abilities(Resource):
 ###########
 # LXC API #
 ###########
+
+
 class LxcTemplatesList(Resource):
     decorators = [jwt_required()]
 
@@ -314,72 +316,89 @@ class LxcTemplatesInfos(Resource):
         return lwp.get_template_options(template), 200
 
 
+containers_list_parser = api.parser()
+containers_list_parser.add_argument(
+    'name', type=str, required=True, location='json')
+containers_list_parser.add_argument(
+    'template', type=str, required=True, location='json')
+containers_list_parser.add_argument('args', type=dict, location='json')
+
+
 ##################
 # Containers API #
 ##################
 class ContainersList(Resource):
     decorators = [jwt_required()]
 
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        super(ContainersList, self).__init__()
-
     @user_has('ct_infos')
+    @api.marshal_with(containers_fields_put, envelope='data')
     def get(self):
         containers = []
 
         for c in lxc.list_containers():
-            if c in current_identity.containers:
+            if Container.query.filter_by(name=c).first().id in current_identity.containers:
                 containers.append(lwp.ct_infos(c))
 
         sorted_dict = sorted(containers, key=lambda k: k['sorted_dict'])
         for ct_dict in sorted_dict:
             del ct_dict['sorted_dict']
 
-        return {'containers': sorted_dict}  # Sorted like the frontend
+        return sorted_dict
 
     @user_has('ct_create')
+    @api.expect(containers_fields_post)
+    @api.marshal_with(containers_fields_put, envelope='data')
+    @api.doc(responses={
+        409: 'Container already exists',
+        500: 'Can\'t create container'
+        })
     def post(self):
-        self.reqparse.add_argument('name', type=str, required=True,
-                                   location='json')
-        self.reqparse.add_argument('template', type=str, required=True,
-                                   location='json')
-        self.reqparse.add_argument('args', type=dict, location='json')
-        args = self.reqparse.parse_args()
+        args = containers_list_parser.parse_args()
 
         c = lxc.Container(args.name)
 
-        # Add the container in the user containers list
-        user = User.query.get(current_identity.id)
-        user.containers.append(args.name)
-
         if not c.defined:
+            if not isinstance(args.args, dict):
+                args.args = {}
             if not c.create(template=args.template, args=args.args):
-                return {'errors': 'Can\'t create container %s!'
-                                 % args.name}, 500
-            db.session.commit()
-            return Containers.get(self, args.name), 201
+                return {}, 500
 
-        return {'errors': 'Container %s already exists!' % args.name}, 409
+            # Add the container in the user containers list
+            container = Container(name=args.name)
+            db.session.add(container)
+            db.session.commit()
+            container = Container.query.filter_by(name=args.name).first()
+            user = User.query.get(current_identity.id)
+            user.containers.append(container.id)
+            db.session.commit()
+            return {'data': Containers.get(self, container.id)}, 201
+
+        return {}, 409
 
 
 class Containers(Resource):
     decorators = [jwt_required()]
 
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        super(Containers, self).__init__()
+    # def __init__(self):
+    #     self.reqparse = reqparse.RequestParser()
+    #     super(Containers, self).__init__()
 
     @user_has('ct_infos')
-    def get(self, container):
-        c = lxc.Container(container)
+    @api.marshal_with(containers_fields_put, envelope='data')
+    def get(self, id):
+        container = Container.query.get(id)
+        c = lxc.Container(container.name)
 
-        if c.defined and container in current_identity.containers:
-            return lwp.ct_infos(container)
+        if c.defined and id in current_identity.containers:
+            response = lwp.ct_infos(container.name)
+            response['id'] = id
+            return response
 
-        return {'errors': 'Container %s doesn\'t exists!' % container}
+        return {'errors': 'Container %s doesn\'t exists!' % container.name}, 404
 
     @user_has('ct_update')
+    @api.expect(containers_fields_put)
+    @api.marshal_with(containers_fields_put, envelope='data')
     def put(self, container):
         c = lxc.Container(container)
 
@@ -402,7 +421,7 @@ class Containers(Resource):
             if args.name and args.name != c.name:
                 if not c.rename(args.name):
                     return {'errors': 'Can\'t rename container %s to %s!'
-                                     % (container, args.name)}
+                            % (container, args.name)}
 
                 container = args.name
                 c = lxc.Container(container)
@@ -469,10 +488,10 @@ class Containers(Resource):
             if c.running:
                 if not c.stop():
                     return {'errors': 'Can\'t stop container %s!'
-                                     % container}, 409
+                            % container}, 409
             if not c.destroy():
                 return {'errors': 'Can\'t destroy container %s!'
-                                 % container}, 409
+                        % container}, 409
             return {'success': 'Container %s destroyed successfully!' % container}, 200
 
         return {'errors': 'Container %s doesn\'t exists!' % container}, 404
@@ -615,41 +634,41 @@ class LxcCheckConfig(Resource):
 
         config_dict = {}
 
-        config_dict['Namespaces'] = is_enabled('CONFIG_NAMESPACES', True)
-        config_dict['Utsname namespace'] = is_enabled('CONFIG_UTS_NS')
-        config_dict['Ipc namespace'] = is_enabled('CONFIG_IPC_NS', True)
-        config_dict['Pid namespace'] = is_enabled('CONFIG_PID_NS', True)
-        config_dict['User namespace'] = is_enabled('CONFIG_USER_NS')
-        config_dict['Network namespace'] = is_enabled('CONFIG_NET_NS')
+        config_dict['namespaces'] = is_enabled('CONFIG_NAMESPACES', True)
+        config_dict['utsname_namespace'] = is_enabled('CONFIG_UTS_NS')
+        config_dict['ipc_namespace'] = is_enabled('CONFIG_IPC_NS', True)
+        config_dict['pid_namespace'] = is_enabled('CONFIG_PID_NS', True)
+        config_dict['user_namespace'] = is_enabled('CONFIG_USER_NS')
+        config_dict['network_namespace'] = is_enabled('CONFIG_NET_NS')
         config_dict[
-            'Multiple /dev/pts instances'] = is_enabled('CONFIG_DEVPTS_MULTIPLE_INSTANCES')
-        config_dict['Cgroup'] = is_enabled('CONFIG_CGROUPS', True)
-        config_dict['Cgroup namespace'] = is_enabled('CONFIG_CGROUP_NS', True)
-        config_dict['Cgroup device'] = is_enabled('CONFIG_CGROUP_DEVICE')
-        config_dict['Cgroup sched'] = is_enabled('CONFIG_CGROUP_SCHED')
-        config_dict['Cgroup cpu account'] = is_enabled('CONFIG_CGROUP_CPUACCT')
+            'multiple_/dev/pts_instances'] = is_enabled('CONFIG_DEVPTS_MULTIPLE_INSTANCES')
+        config_dict['cgroup'] = is_enabled('CONFIG_CGROUPS', True)
+        config_dict['cgroup_namespace'] = is_enabled('CONFIG_CGROUP_NS', True)
+        config_dict['cgroup_device'] = is_enabled('CONFIG_CGROUP_DEVICE')
+        config_dict['cgroup_sched'] = is_enabled('CONFIG_CGROUP_SCHED')
+        config_dict['cgroup_cpu account'] = is_enabled('CONFIG_CGROUP_CPUACCT')
 
         if kver_major >= 3 and kver_minor >= 6:
-            config_dict['Cgroup memory controller'] = is_enabled(
+            config_dict['cgroup_memory_controller'] = is_enabled(
                 'CONFIG_MEMCG')
         else:
-            config_dict['Cgroup memory controller'] = is_enabled(
+            config_dict['cgroup_memory_controller'] = is_enabled(
                 'CONFIG_CGROUP_MEM_RES_CTLR')
 
         if is_set('CONFIG_SMP'):
-            config_dict['Cgroup cpuset'] = is_enabled('CONFIG_CPUSETS')
+            config_dict['cgroup_cpuset'] = is_enabled('CONFIG_CPUSETS')
 
-        config_dict['Veth pair device'] = is_enabled('CONFIG_VETH')
-        config_dict['Macvlan'] = is_enabled('CONFIG_MACVLAN')
-        config_dict['Vlan'] = is_enabled('CONFIG_VLAN_8021Q')
+        config_dict['veth_pair_device'] = is_enabled('CONFIG_VETH')
+        config_dict['macvlan'] = is_enabled('CONFIG_MACVLAN')
+        config_dict['vlan'] = is_enabled('CONFIG_VLAN_8021Q')
 
         if kver_major == 2 and kver_minor < 33:
-            config_dict['File capabilities'] = is_enabled(
+            config_dict['file_capabilities'] = is_enabled(
                 'CONFIG_SECURITY_FILE_CAPABILITIES')
         if (kver_major == 2 and kver_minor > 32) or kver_major > 2:
-            config_dict['File capabilities'] = 'enabled'
+            config_dict['file_capabilities'] = 'enabled'
 
-        return config_dict
+        return {'data': config_dict}
 
 
 class HostStats(Resource):
@@ -661,30 +680,30 @@ class HostStats(Resource):
         os_str = ' '.join(os)
         host_cpu_infos = lwp.host_cpu_infos()
 
-        return dict(uptime=lwp.host_uptime(),
-                    hostname=socket.gethostname(),
-                    dist=os_str,
-                    disk_usage=lwp.host_disk_usage(),
-                    cpu=dict(
+        return {'data': dict(uptime=lwp.host_uptime(),
+                             hostname=socket.gethostname(),
+                             dist=os_str,
+                             disk_usage=lwp.host_disk_usage(),
+                             cpu=dict(
             usage=lwp.host_cpu_percent(),
             model=host_cpu_infos['name'],
             cores=host_cpu_infos['cores']
         ),
             memory=lwp.host_memory_usage(),
-            kernel=lwp.host_kernel_verion())
+            kernel=lwp.host_kernel_verion())}
+
+
+host_reboot_parser = api.parser()
+host_reboot_parser.add_argument('message', type=str, location='json')
 
 
 class HostReboot(Resource):
     decorators = [jwt_required()]
 
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        super(HostReboot, self).__init__()
-
     @user_has('host_reboot')
+    @api.expect(host_reboot_fields_post)
     def post(self):
-        self.reqparse.add_argument('message', type=str, location='json')
-        args = self.reqparse.parse_args()
+        args = host_reboot_parser.parse_args()
 
         if not args.message:
             message = 'Reboot from RESTful API'
@@ -701,4 +720,4 @@ class HostReboot(Resource):
             return dict(status='success',
                         message=message)
         except:
-            return dict(status='error')
+            return dict(status='error'), 500

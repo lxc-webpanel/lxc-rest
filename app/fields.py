@@ -49,3 +49,40 @@ abilities_fields = api.inherit('AbilitiesModel', abilities_fields_put, {
     'id': fields.Integer,
     'name': fields.String
 })
+
+
+# HostReboot JSON fields
+host_reboot_fields_post = api.model('HostRebootModelPost', {
+    'message': fields.String
+})
+
+
+containers_args_fields = api.model('ContainerArgs', {})
+
+containers_fields_post = api.model('ContainerstModelPost', {
+    'name': fields.String,
+    'template': fields.String,
+    'args': fields.Nested(containers_args_fields)
+})
+
+
+containers_fields_put = api.model('ContainerstModelPut', {
+    'id': fields.Integer,
+    'arch': fields.String,
+    'cpu_shares': fields.Integer,
+    'cpus': fields.String,
+    'groups': fields.List(fields.String),
+    'hostname': fields.String,
+    'memory_limit': fields.Integer,
+    'memory_usage': fields.Integer,
+    'name': fields.String,
+    'networks': fields.List(fields.String),
+    'pid': fields.Integer,
+    'rootfs': fields.String,
+    'sorted_dict': fields.Integer,
+    'start_auto': fields.Integer,
+    'start_delay': fields.Integer,
+    'start_order': fields.Integer,
+    'state': fields.String,
+    'swap_limit': fields.Integer
+})

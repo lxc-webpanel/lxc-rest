@@ -25,10 +25,11 @@ def identity(payload):
     print(payload)
     return User.query.get(payload['identity'])
 
+
 @app.before_request
 def populate_containers_table():
     current_containers_list = lxc.list_containers()
-    database_containers_list = [str(i) for i in Container.query.all()]
+    database_containers_list = [str(i.name) for i in Container.query.all()]
 
     # Removing old containers from database
     for ct in database_containers_list:

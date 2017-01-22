@@ -23,19 +23,19 @@ nslwp.add_resource(Abilities, '/abilities/<int:id>')
 nslxc.add_resource(ContainersList,
                    '/containers')
 nslxc.add_resource(Containers,
-                   '/containers/<string:container>')
+                   '/containers/<int:id>')
 nslxc.add_resource(ContainersStart,
-                   '/containers/<string:container>/start')
+                   '/containers/<int:id>/start')
 nslxc.add_resource(ContainersFreeze,
-                   '/containers/<string:container>/freeze')
+                   '/containers/<int:id>/freeze')
 nslxc.add_resource(ContainersUnfreeze,
-                   '/containers/<string:container>/unfreeze')
+                   '/containers/<int:id>/unfreeze')
 nslxc.add_resource(ContainersStop,
-                   '/containers/<string:container>/stop')
+                   '/containers/<int:id>/stop')
 nslxc.add_resource(ContainersShutdown,
-                   '/containers/<string:container>/shutdown')
+                   '/containers/<int:id>/shutdown')
 nslxc.add_resource(ContainersRestart,
-                   '/containers/<string:container>/restart')
+                   '/containers/<int:id>/restart')
 
 # lxc-chekconfig route
 nslxc.add_resource(LxcCheckConfig, '/checkconfig')
