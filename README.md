@@ -34,4 +34,5 @@ You can store instance configuration in `instance/config.py`
 or
 
 Set your own env var :
+
 `export LWP_CONFIG_FILE='/path/to/config/production.py'`
