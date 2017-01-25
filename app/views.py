@@ -336,8 +336,11 @@ class ContainersList(Resource):
         containers = []
 
         for c in lxc.list_containers():
-            if Container.query.filter_by(name=c).first().id in current_identity.containers:
-                containers.append(lwp.ct_infos(c))
+            container = Container.query.filter_by(name=c).first()
+            if container.id in current_identity.containers:
+                infos = lwp.ct_infos(c)
+                infos['id'] = container.id
+                containers.append(infos)
 
         sorted_dict = sorted(containers, key=lambda k: k['sorted_dict'])
         for ct_dict in sorted_dict:
@@ -349,6 +352,7 @@ class ContainersList(Resource):
     @api.expect(containers_fields_post)
     @api.marshal_with(containers_fields_put, envelope='data')
     @api.doc(responses={
+        201: 'Container created',
         409: 'Container already exists',
         500: 'Can\'t create container'
         })

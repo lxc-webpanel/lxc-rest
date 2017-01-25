@@ -11,13 +11,27 @@ RESTful API for LXC and LXC WEB PANEL
 ## Installation
 ```
 apt install python3-lxc
+
 git clone --recursive https://github.com/lxc-webpanel/lxc-rest.git
+
 cd lxc-rest
+
 pip install -r requirements.txt
+
 python3 install/setup.py
+
 python3 run.py
 ```
 
 ## Documentation
 
-* [**API**](http://petstore.swagger.io/?url=http://lxc-webpanel.github.io/doc/swagger.json)
+* [Swagger](http://petstore.swagger.io/?url=http://lxc-webpanel.github.io/doc/swagger.json)
+
+
+### Configuration
+You can store instance configuration in `instance/config.py`
+
+or
+
+Set your own env var :
+`export LWP_CONFIG_FILE='/path/to/config/production.py'`
