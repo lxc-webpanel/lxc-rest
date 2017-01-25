@@ -40,7 +40,7 @@ cors = CORS(app, resources={r'/*': {'origins': app.config['ALLOW_ORIGIN']}})
 db = SQLAlchemy(app, session_options={
                 'autoflush': False, 'autocommit': False, "expire_on_commit": False})
 api = Api(app, doc='/doc/', title='LXC Web Panel API documentation',
-          description='https://github.com/')
+          description='https://github.com/lxc-webpanel/lxc-rest')
 nslxc = api.namespace('api/v1/lxc/', description='Operations related to LXC')
 nslwp = api.namespace(
     'api/v1/lwp/', description='Operations related to LXC Web Panel')
