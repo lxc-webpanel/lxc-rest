@@ -7,7 +7,6 @@ import subprocess
 import time
 import os
 import configparser
-import json
 
 
 def _run(cmd, output=False):

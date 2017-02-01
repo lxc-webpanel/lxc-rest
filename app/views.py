@@ -17,7 +17,7 @@ import gzip
 import socket
 import subprocess
 import json
-from sortedcontainers import SortedDict
+
 
 users_list_parser = api.parser()
 users_list_parser.add_argument(
