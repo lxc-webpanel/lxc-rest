@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_restplus import Api
 from flask_jwt import JWT
 from flask_cors import CORS
+from werkzeug.contrib.profiler import ProfilerMiddleware
 
 app = Flask(__name__, instance_relative_config=True,
             template_folder='../templates')
@@ -26,6 +27,11 @@ try:
 except RuntimeError:
     pass
 
+try:
+    if app.config['PROFILE']:
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+except KeyError:
+    pass
 
 def authenticate(username, password):
     user = User.query.filter_by(username=username).first()

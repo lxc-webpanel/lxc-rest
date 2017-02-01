@@ -57,32 +57,132 @@ host_reboot_fields_post = api.model('HostRebootModelPost', {
 })
 
 
-containers_args_fields = api.model('ContainerArgs', {})
-
-containers_fields_post = api.model('ContainerstModelPost', {
-    'name': fields.String,
-    'template': fields.String,
-    'args': fields.Nested(containers_args_fields)
+lxc_container_conf = api.model('LxcContainerConf', {
+    'aa_allow_incomplete': fields.Integer(default=0),
+    'aa_profile': fields.String,
+    'arch': fields.String,
+    'autodev': fields.Integer(default=1),
+    'cap': fields.Nested(api.model('LxcCap', {
+        'drop': fields.List(fields.String),
+        'keep': fields.List(fields.String)
+    })),
+    'cgroup': fields.Nested(api.model('LxcCgroup', {
+        'memory': fields.Nested(api.model('LxcCgroupMemory', {
+            'limit_in_bytes': fields.Integer,
+            'memsw': fields.Nested(api.model('LxcCgroupMemoryMemsw', {
+                'limit_in_bytes': fields.Integer
+            }))
+        })),
+        'cpu': fields.Nested(api.model('LxcCgroupCpu', {
+            'shares': fields.Integer(default=1024)
+        })),
+        'cpuset': fields.Nested(api.model('LxcCgroupCpuset', {
+            'cpus': fields.List(fields.Integer)
+        }))
+    })),
+    'console': fields.Nested(api.model('LxcConsole', {
+        '_': fields.String,
+        'logfile': fields.String
+    })),
+    'devttydir': fields.String,
+    'environment': fields.List(fields.String),
+    'ephemeral': fields.Integer(default=0),
+    'group': fields.List(fields.String),
+    'haltsignal': fields.String(default='SIGPWR'),
+    'hook': fields.Nested(api.model('LxcHook', {
+        'autodev': fields.List(fields.String),
+        'clone': fields.List(fields.String),
+        'destroy': fields.List(fields.String),
+        'mount': fields.List(fields.String),
+        'post-stop': fields.List(fields.String),
+        'pre-mount': fields.List(fields.String),
+        'pre-start': fields.List(fields.String),
+        'start': fields.List(fields.String),
+        'stop': fields.List(fields.String)
+    })),
+    'id_map': fields.String,
+    'include': fields.String,
+    'init_cmd': fields.String,
+    'init_gid': fields.Integer(default=0),
+    'init_uid': fields.Integer(default=0),
+    'kmsg': fields.Integer(default=0),
+    'logfile': fields.String,
+    'loglevel': fields.Integer(default=5),
+    'monitor': fields.Nested(api.model('LxcMonitor', {
+        'unshare': fields.Integer(default=0)
+    })),
+    'mount': fields.Nested(api.model('LxcMount', {
+        '_': fields.String,
+        'auto': fields.String,
+        'entry': fields.List(fields.String)
+    })),
+    'network': fields.List(fields.Nested(api.model('LxcNetwork', {
+        'type': fields.String,
+        'veth': fields.Nested(api.model('LxcNetworkVeth', {
+            'pair': fields.Integer
+        })),
+        'vlan': fields.Nested(api.model('LxcNetworkVlan', {
+            'id': fields.Integer
+        })),
+        'macvlan': fields.Nested(api.model('LxcNetworkMacvlan', {
+            'mode': fields.String
+        })),
+        'flags': fields.String,
+        'link': fields.String,
+        'mtu': fields.Integer,
+        'name': fields.String,
+        'hwaddr': fields.String,
+        'ipv4': fields.Nested(api.model('LxcNetworkIpv4', {
+            '_': fields.List(fields.String),
+            'gateway': fields.String
+        })),
+        'ipv6': fields.Nested(api.model('LxcNetworkIpv6', {
+            '_': fields.List(fields.String),
+            'gateway': fields.String
+        })),
+        'script': fields.Nested(api.model('LxcNetworkScript', {
+            'up': fields.String,
+            'down': fields.String
+        }))
+    }))),
+    'no_new_privs': fields.Integer(default=0),
+    'pts': fields.String,
+    'rebootsignal': fields.String(default='SIGINT'),
+    'rootfs': fields.Nested(api.model('LxcRootfs', {
+        '_': fields.String,
+        'mount': fields.String,
+        'options': fields.String,
+        'backend': fields.String
+    })),
+    'se_context': fields.String,
+    'seccomp': fields.String,
+    'start': fields.Nested(api.model('LxcStart', {
+        'auto': fields.Integer(default=0),
+        'delay': fields.Integer(default=None),
+        'order': fields.Integer(default=None)
+    })),
+    'stopsignal': fields.String(default='SIGKILL'),
+    'syslog': fields.String,
+    'tty': fields.String,
+    'utsname': fields.String
 })
 
 
-containers_fields_put = api.model('ContainerstModelPut', {
-    'id': fields.Integer,
-    'arch': fields.String,
-    'cpu_shares': fields.Integer,
-    'cpus': fields.String,
-    'groups': fields.List(fields.String),
-    'hostname': fields.String,
-    'memory_limit': fields.Integer,
-    'memory_usage': fields.Integer,
+containers_fields_put = api.model('ContainersModelPut', {
     'name': fields.String,
-    'networks': fields.List(fields.String),
+    'lxc': fields.Nested(lxc_container_conf)
+})
+
+containers_fields_post = api.inherit('ContainersModelPost', containers_fields_put, {
+    'name': fields.String(required=True),
+    'template': fields.Nested(api.model('ContainersModelTemplate', {
+        'name': fields.String(required=True),
+        'args': fields.String
+    }))
+})
+
+containers_fields = api.inherit('ContainersModel', containers_fields_put, {
+    'id': fields.Integer,
     'pid': fields.Integer,
-    'rootfs': fields.String,
-    'sorted_dict': fields.Integer,
-    'start_auto': fields.Integer,
-    'start_delay': fields.Integer,
-    'start_order': fields.Integer,
-    'state': fields.String,
-    'swap_limit': fields.Integer
+    'state': fields.String
 })

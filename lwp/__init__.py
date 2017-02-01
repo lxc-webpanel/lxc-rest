@@ -7,6 +7,7 @@ import subprocess
 import time
 import os
 import configparser
+import json
 
 
 def _run(cmd, output=False):
@@ -26,99 +27,163 @@ def _run(cmd, output=False):
         return False
 
 
-def ct_infos(container):
+def ct_infos(container, id=None):
     c = lxc.Container(container)
 
-    state = c.state
-    networks = []
-    memory_usage = 0
-
-    # Try to get memory limit by cgroup (started container) or by config (not
-    # always set)
-    try:
-        memory_limit = int(c.get_cgroup_item('memory.limit_in_bytes'))
-        if memory_limit == 18446744073709551615:
-            memory_limit = -1
-        else:
-            memory_limit = memory_limit / 1048576
-    except KeyError:
+    def get_config(c, config_item, default=None):
+        if config_item.startswith('lxc.cgroup'):
+            cgroup = '.'.join(config_item.split('.')[2:])
+            try:
+                value = c.get_cgroup_item(cgroup)
+                if value == '':
+                    value = default
+                try:
+                    if value.isdigit():
+                        value = int(value)
+                except AttributeError:
+                    if not isinstance(value, list):
+                        value = default
+                return value
+            except KeyError:
+                pass
         try:
-            memory_limit = int(c.get_config_item(
-                'lxc.cgroup.memory.limit_in_bytes')[0]) / 1048576
-        except IndexError:
-            memory_limit = -1
+            value = c.get_config_item(config_item)
+            if value == 'NOTSET' or value == '':
+                value = default
+            try:
+                if value.isdigit():
+                    value = int(value)
+            except AttributeError:
+                if not isinstance(value, list):
+                    value = default
+        except KeyError:
+            value = default
+        return value
 
-    # Get swap limit
-    try:
-        swap_limit = int(c.get_cgroup_item(
-            'memory.memsw.limit_in_bytes')) / 1048576
-    except KeyError:
-        try:
-            swap_limit = int(c.get_config_item(
-                'lxc.cgroup.memory.memsw.limit_in_bytes')[0]) / 1048576
-        except IndexError:
-            swap_limit = -1
+    network = []
 
-    # Get cpu shares
-    try:
-        cpu_shares = int(c.get_cgroup_item('cpu.shares'))
-    except KeyError:
-        try:
-            cpu_shares = int(c.get_config_item('lxc.cgroup.cpu.shares')[0])
-        except IndexError:
-            cpu_shares = 1024
+    for i in range(len(c.get_config_item('lxc.network'))):
+        network.append(
+            {
+                'flags': get_config(c, 'lxc.network.%s.flags' % i),
+                'hwaddr': get_config(c, 'lxc.network.%s.hwaddr' % i),
+                'ipv4': {
+                    '_': get_config(c, 'lxc.network.%s.ipv4' % i),
+                    'gateway': get_config(c, 'lxc.network.%s.ipv4.gateway' % i)
+                },
+                'ipv6': {
+                    '_': get_config(c, 'lxc.network.%s.ipv6' % i),
+                    'gateway': get_config(c, 'lxc.network.%s.ipv6.gateway' % i)
+                },
+                'link': get_config(c, 'lxc.network.%s.link' % i),
+                'macvlan': {
+                    'mode': get_config(c, 'lxc.network.%s.macvlan.mode' % i)
+                },
+                'mtu': get_config(c, 'lxc.network.%s.mtu' % i),
+                'name': get_config(c, 'lxc.network.%s.name' % i),
+                'script': {
+                    'down': get_config(c, 'lxc.network.%s.script.down' % i),
+                    'up': get_config(c, 'lxc.network.%s.script.up' % i)
+                },
+                'type': get_config(c, 'lxc.network.%s.type' % i),
+                'veth': {
+                    'pair': get_config(c, 'lxc.network.%s.veth.pair' % i)
+                },
+                'vlan': {
+                    'id': get_config(c, 'lxc.network.%s.vlan.id' % i)
+                }
+            }
+        )
 
-    # Get cpus
-    try:
-        cpus = c.get_cgroup_item('cpuset.cpus')
-    except KeyError:
-        try:
-            cpus = c.get_config_item('lxc.cgroup.cpuset.cpus')[0]
-        except IndexError:
-            cpus = "0"
+    infos = {
+        'name': c.name,
+        'id': id,
+        'pid': c.init_pid,
+        'state': c.state,
+        'lxc': {
+            'aa_allow_incomplete': get_config(c, 'lxc.aa_allow_incomplete', default=0),
+            'aa_profile': get_config(c, 'lxc.aa_profile'),
+            'arch': get_config(c, 'lxc.arch'),
+            'autodev': get_config(c, 'lxc.autodev', default=1),
+            'cap': {
+                'drop': get_config(c, 'lxc.cap.drop', default=[]),
+                'keep': get_config(c, 'lxc.cap.keep', default=[])
+            },
+            'cgroup': {
+                'cpu': {
+                    'shares': get_config(c, 'lxc.cgroup.cpu.shares', default=1024)
+                },
+                'cpuset': {
+                    'cpus': get_config(c, 'lxc.cgroup.cpuset.cpus', default=[])
+                },
+                'memory': {
+                    'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.limit_in_bytes'),
+                    'memsw': {
+                        'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes')
+                    }
+                }
+            },
+            'console': {
+                '_': get_config(c, 'lxc.console'),
+                'logfile': get_config(c, 'lxc.console.logfile')
+            },
+            'devttydir': get_config(c, 'lxc.devttydir'),
+            'environment': get_config(c, 'lxc.environment', default=[]),
+            'ephemeral': get_config(c, 'lxc.ephemeral', default=0),
+            'group': get_config(c, 'lxc.group', default=[]),
+            'haltsignal': get_config(c, 'lxc.haltsignal', default='SIGPWR'),
+            'hook': {
+                'autodev': get_config(c, 'lxc.hook.autodev', default=[]),
+                'clone': get_config(c, 'lxc.hook.clone', default=[]),
+                'destroy': get_config(c, 'lxc.hook.destroy', default=[]),
+                'mount': get_config(c, 'lxc.hook.mount', default=[]),
+                'post-stop': get_config(c, 'lxc.hook.post-stop', default=[]),
+                'pre-mount': get_config(c, 'lxc.hook.pre-mount', default=[]),
+                'pre-start': get_config(c, 'lxc.hook.pre-start', default=[]),
+                'start': get_config(c, 'lxc.hook.start', default=[]),
+                'stop': get_config(c, 'lxc.hook.stop', default=[])
+            },
+            'id_map': get_config(c, 'lxc.id_map'),
+            'include': get_config(c, 'lxc.include'),
+            'init_cmd': get_config(c, 'lxc.init_cmd'),
+            'init_gid': get_config(c, 'lxc.init_gid', default=0),
+            'init_uid': get_config(c, 'lxc.init_uid', default=0),
+            'kmsg': get_config(c, 'lxc.kmsg', default=0),
+            'logfile': get_config(c, 'lxc.logfile'),
+            'loglevel': get_config(c, 'lxc.loglevel', default=5),
+            'monitor': {
+                'unshare': get_config(c, 'lxc.monitor.unshare', default=0)
+            },
+            'mount': {
+                '_': get_config(c, 'lxc.mount'),
+                'auto': get_config(c, 'lxc.mount.auto'),
+                'entry': get_config(c, 'lxc.mount.entry', default=[])
+            },
+            'network': network,
+            'no_new_privs': get_config(c, 'lxc.no_new_privs', default=0),
+            'pts': get_config(c, 'lxc.pts'),
+            'rebootsignal': get_config(c, 'lxc.rebootsignal', default='SIGINT'),
+            'rootfs': {
+                '_': get_config(c, 'lxc.rootfs'),
+                'backend': get_config(c, 'lxc.rootfs.mount'),
+                'mount': get_config(c, 'lxc.rootfs.options'),
+                'options': get_config(c, 'lxc.rootfs.backend')
+            },
+            'se_context': get_config(c, 'lxc.se_context'),
+            'seccomp': get_config(c, 'lxc.seccomp'),
+            'start': {
+                'auto': get_config(c, 'lxc.start.auto', default=0),
+                'delay': get_config(c, 'lxc.start.delay'),
+                'order': get_config(c, 'lxc.start.order')
+            },
+            'stopsignal': get_config(c, 'lxc.stopsignal', default='SIGKILL'),
+            'syslog': get_config(c, 'lxc.syslog'),
+            'tty': get_config(c, 'lxc.tty'),
+            'utsname': get_config(c, 'lxc.utsname')
+        }
+    }
 
-    # Get groups
-    try:
-        groups = c.get_config_item('lxc.group')[0].split(',')
-    except IndexError:
-        groups = []
-
-    if state == 'RUNNING':
-        interfaces = c.get_interfaces()
-        ips = c.get_ips()
-
-        for i in range(0, len(c.get_interfaces()) - 1):
-            networks.append({'interface': interfaces[i], 'address': ips[i]})
-        sorted_dict = 1
-
-    if state == 'FROZEN':
-        sorted_dict = 2
-
-    if state == 'STOPPED':
-        sorted_dict = 3
-
-    if re.match('RUNNING|FROZEN', state):
-        # CT memory usage in MB
-        memory_usage = int(c.get_cgroup_item(
-            'memory.usage_in_bytes')) / 1048576
-
-    return dict(name=c.name,
-                hostname=c.get_config_item('lxc.utsname'),
-                rootfs=c.get_config_item('lxc.rootfs'),
-                arch=c.get_config_item('lxc.arch'),
-                start_auto=int(c.get_config_item('lxc.start.auto')),
-                start_delay=int(c.get_config_item('lxc.start.delay')),
-                start_order=int(c.get_config_item('lxc.start.order')),
-                state=state,
-                groups=groups,
-                pid=c.init_pid,
-                networks=networks,
-                memory_usage=memory_usage,
-                memory_limit=memory_limit,
-                swap_limit=swap_limit,
-                cpu_shares=cpu_shares,
-                cpus=cpus,
-                sorted_dict=sorted_dict)
+    return infos
 
 
 def host_disk_usage(partition='/'):
