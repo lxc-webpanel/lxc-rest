@@ -77,7 +77,7 @@ lxc_container_conf = api.model('LxcContainerConf', {
             'shares': fields.Integer(default=1024)
         })),
         'cpuset': fields.Nested(api.model('LxcCgroupCpuset', {
-            'cpus': fields.List(fields.Integer)
+            'cpus': fields.List(fields.String)
         }))
     })),
     'console': fields.Nested(api.model('LxcConsole', {

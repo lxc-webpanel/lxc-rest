@@ -36,8 +36,10 @@ def ct_infos(container, id=None):
                 value = c.get_cgroup_item(cgroup)
                 if value == '':
                     value = default
+                elif default == [] and isinstance(value, str):
+                    value = [value]
                 try:
-                    if value.isdigit():
+                    if value.isdigit() and default != []:
                         value = int(value)
                 except AttributeError:
                     if not isinstance(value, list):
@@ -50,7 +52,7 @@ def ct_infos(container, id=None):
             if value == 'NOTSET' or value == '':
                 value = default
             try:
-                if value.isdigit():
+                if value.isdigit() and default != []:
                     value = int(value)
             except AttributeError:
                 if not isinstance(value, list):

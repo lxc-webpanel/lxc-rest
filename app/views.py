@@ -721,7 +721,7 @@ class ContainersStart(Resource):
         if c.defined and id in current_identity.containers:
             c.start()
             c.wait('RUNNING', 3)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
@@ -740,7 +740,7 @@ class ContainersFreeze(Resource):
         if c.defined and id in current_identity.containers:
             c.freeze()
             c.wait('FROZEN', 3)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
@@ -759,7 +759,7 @@ class ContainersUnfreeze(Resource):
         if c.defined and id in current_identity.containers:
             c.unfreeze()
             c.wait('RUNNING', 3)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
@@ -778,7 +778,7 @@ class ContainersStop(Resource):
         if c.defined and id in current_identity.containers:
             c.stop()
             c.wait('STOPPED', 3)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
@@ -797,7 +797,7 @@ class ContainersShutdown(Resource):
         if c.defined and id in current_identity.containers:
             c.shutdown(10)
             c.wait('STOPPED', 3)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
@@ -816,7 +816,7 @@ class ContainersRestart(Resource):
         if c.defined and id in current_identity.containers:
             ContainersStop.post(self, id)
             ContainersStart.post(self, id)
-            return Containers.get(self, id)
+            return 200
 
         return 404
 
