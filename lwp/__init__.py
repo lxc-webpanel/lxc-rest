@@ -297,7 +297,7 @@ def host_uptime():
         uptime_seconds = float(f.readline().split()[0])
         td = timedelta(seconds=uptime_seconds)
         days, seconds = td.days, td.seconds
-        hours = days * 24 + seconds // 3600
+        hours = seconds // 3600
         minutes = (seconds % 3600) // 60
         seconds = (seconds % 60)
     return {'days': days,
