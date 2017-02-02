@@ -920,7 +920,7 @@ class HostStats(Resource):
             uptime=lwp.host_uptime(),
             hostname=socket.gethostname(),
             dist=os_str,
-            disk_usage=lwp.host_disk_usage(),
+            disk=lwp.host_disk_usage(),
             cpu=dict(
                 usage=lwp.host_cpu_percent(),
                 model=host_cpu_infos['name'],
