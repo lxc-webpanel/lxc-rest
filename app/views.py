@@ -916,15 +916,16 @@ class HostStats(Resource):
         os_str = ' '.join(os)
         host_cpu_infos = lwp.host_cpu_infos()
 
-        return {'data': dict(uptime=lwp.host_uptime(),
-                             hostname=socket.gethostname(),
-                             dist=os_str,
-                             disk_usage=lwp.host_disk_usage(),
-                             cpu=dict(
-            usage=lwp.host_cpu_percent(),
-            model=host_cpu_infos['name'],
-            cores=host_cpu_infos['cores']
-        ),
+        return {'data': dict(
+            uptime=lwp.host_uptime(),
+            hostname=socket.gethostname(),
+            dist=os_str,
+            disk_usage=lwp.host_disk_usage(),
+            cpu=dict(
+                usage=lwp.host_cpu_percent(),
+                model=host_cpu_infos['name'],
+                cores=host_cpu_infos['cores']
+            ),
             memory=lwp.host_memory_usage(),
             kernel=lwp.host_kernel_verion())}
 

@@ -7,6 +7,7 @@ import subprocess
 import time
 import os
 import configparser
+from datetime import timedelta
 
 
 def _run(cmd, output=False):
@@ -291,17 +292,18 @@ def host_memory_usage():
 def host_uptime():
     '''
     returns a dict of the system uptime
-            {'day': days,
-            'time': '%d:%02d' % (hours,minutes)}
     '''
-    f = open('/proc/uptime')
-    uptime = int(f.readlines()[0].split('.')[0])
-    minutes = uptime / 60 % 60
-    hours = uptime / 60 / 60 % 24
-    days = uptime / 60 / 60 / 24
-    f.close()
-    return {'day': '%01d' % days,
-            'time': '%d:%02d' % (hours, minutes)}
+    with open('/proc/uptime', 'r') as f:
+        uptime_seconds = float(f.readline().split()[0])
+        td = timedelta(seconds=uptime_seconds)
+        days, seconds = td.days, td.seconds
+        hours = days * 24 + seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = (seconds % 60)
+    return {'days': days,
+            'hours': hours,
+            'minutes': minutes,
+            'seconds': seconds}
 
 
 def host_kernel_verion():
