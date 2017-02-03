@@ -36,7 +36,7 @@ class UsersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos_all')
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self):
         """
         Get users list
@@ -86,7 +86,7 @@ class Users(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos')
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self, id):
         """
         Get user
@@ -147,7 +147,7 @@ class Users(Resource):
 class Me(Resource):
     decorators = [jwt_required()]
 
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self):
         """
         Get me

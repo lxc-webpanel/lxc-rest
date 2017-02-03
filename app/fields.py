@@ -4,11 +4,14 @@ from flask_restplus import fields
 from app import api
 
 # Users JSON fields
-users_fields_put = api.model('UsersModelPut', {
+users_fields_get = api.model('UsersModelGet', {
     'name': fields.String,
     'email': fields.String,
     'groups': fields.List(fields.Integer(min=1)),
-    'containers': fields.List(fields.Integer(min=1)),
+    'containers': fields.List(fields.Integer(min=1))
+})
+
+users_fields_put = api.inherit('UsersModelPut', users_fields_get, {
     'password': fields.String
 })
 
@@ -19,7 +22,7 @@ users_fields_post = api.inherit('UsersModelPost', users_fields_put, {
     'password': fields.String(required=True)
 })
 
-users_fields = api.inherit('UsersModel', users_fields_put, {
+users_fields = api.inherit('UsersModel', users_fields_get, {
     'id': fields.Integer
 })
 
