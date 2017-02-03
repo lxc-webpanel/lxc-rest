@@ -5,6 +5,10 @@ from .models import User, Container
 import lxc
 
 
+@jwt.identity_handler
+def identity(payload):
+    return User.query.get(payload['identity'])
+
 @app.before_request
 def populate_containers_table():
     current_containers_list = lxc.list_containers()
