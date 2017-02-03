@@ -5,6 +5,7 @@ from app import api
 
 # Users JSON fields
 users_fields_get = api.model('UsersModelGet', {
+    'admin': fields.Boolean(default=False),
     'name': fields.String,
     'email': fields.String,
     'groups': fields.List(fields.Integer(min=1)),

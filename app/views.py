@@ -61,6 +61,8 @@ class UsersList(Resource):
         user.name = args.name
         user.groups = args.groups
 
+        if args.admin and current_identity.admin:
+            user.admin = args.admin
         if args.email:
             user.email = args.email
         if args.containers:
@@ -112,6 +114,8 @@ class Users(Resource):
 
         args = users_parser.parse_args()
 
+        if args.admin and current_identity.admin:
+            user.admin = args.admin
         if args.name:
             user.name = args.name
         if args.email:
@@ -165,6 +169,8 @@ class Me(Resource):
 
         args = users_parser.parse_args()
 
+        if args.admin and current_identity.admin:
+            user.admin = args.admin
         if args.name:
             user.name = args.name
         if args.email:
