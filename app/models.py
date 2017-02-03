@@ -78,6 +78,7 @@ user_container_table = db.Table(
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
+    admin = db.Column(db.Boolean, default=False)
     name = db.Column(db.String(255))
     username = db.Column(db.String(60), unique=True)
     email = db.Column(db.String(120))
@@ -103,6 +104,7 @@ class User(db.Model):
 
     def __init__(
         self,
+        admin=False,
         name=None,
         username=None,
         email=None,
@@ -111,6 +113,7 @@ class User(db.Model):
         containers=None
     ):
 
+        self.admin = admin
         self.name = name
         self.username = username
         self.email = email

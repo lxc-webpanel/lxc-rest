@@ -74,6 +74,7 @@ def _run():
     db.session.commit()
 
     user = User(
+        admin=True,
         name='John Doe',
         username='admin',
         groups=[1]

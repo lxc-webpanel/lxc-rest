@@ -383,7 +383,7 @@ class ContainersList(Resource):
 
         for c in lxc.list_containers():
             container = Container.query.filter_by(name=c).first()
-            if container.id in current_identity.containers:
+            if container.id in current_identity.containers or current_identity.admin:
                 infos = lwp.ct_infos(c, id=container.id)
                 containers.append(infos)
 
@@ -443,11 +443,11 @@ class Containers(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             response = lwp.ct_infos(container.name, id=id)
             return response
 
-        return {'errors': 'Container doesn\'t exists!'}, 404
+        return 404
 
     @user_has('ct_update')
     @api.expect(containers_fields_put)
@@ -474,214 +474,214 @@ class Containers(Resource):
 
         c = lxc.Container(container.name)
 
-        if 'name' in data:
-            if data['name'] != c.name:
-                if not c.rename(data['name']):
-                    return 500
+        if c.defined and (id in current_identity.containers or current_identity.admin):
+            if 'name' in data:
+                if data['name'] != c.name:
+                    if c.rename(data['name']):
+                        c = lxc.Container(data['name'])
+                    else:
+                        return 500
 
-        c = lxc.Container(data['name'])
-
-        if 'lxc' in data:
-            if 'aa_allow_incomplete' in data['lxc']:
-                set_config(c, 'lxc.aa_allow_incomplete', data[
-                           'lxc']['aa_allow_incomplete'])
-            if 'aa_profile' in data['lxc']:
-                set_config(c, 'lxc.aa_profile', data['lxc']['aa_profile'])
-            if 'arch' in data['lxc']:
-                set_config(c, 'lxc.arch', data['lxc']['arch'])
-            if 'autodev' in data['lxc']:
-                set_config(c, 'lxc.autodev', data['lxc']['autodev'])
-            if 'cap' in data['lxc']:
-                if 'drop' in data['lxc']['cap']:
-                    set_config(c, 'lxc.cap.drop', data['lxc']['cap']['drop'])
-                if 'keep' in data['lxc']['cap']:
-                    set_config(c, 'lxc.cap.keep', data['lxc']['cap']['keep'])
-            if 'cgroup' in data['lxc']:
-                if 'memory' in data['lxc']['cgroup']:
-                    if 'limit_in_bytes' in data['lxc']['cgroup']['memory']:
-                        set_config(c, 'lxc.cgroup.memory.limit_in_bytes', data[
-                                   'lxc']['cgroup']['memory']['limit_in_bytes'])
-                    if 'memsw' in data['lxc']['cgroup']['memory']:
-                        if 'limit_in_bytes' in data['lxc']['cgroup']['memory']['memsw']:
-                            set_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes', data[
-                                       'lxc']['cgroup']['memory']['memsw']['limit_in_bytes'])
-                if 'cpu' in data['lxc']['cgroup']:
-                    if 'shares' in data['lxc']['cgroup']['cpu']:
-                        set_config(c, 'lxc.cgroup.cpu.shares', data[
-                                   'lxc']['cgroup']['cpu']['shares'])
-                if 'cpuset' in data['lxc']['cgroup']:
-                    if 'cpus' in data['lxc']['cgroup']['cpuset']:
-                        set_config(c, 'lxc.cgroup.cpuset.cpus', data[
-                                   'lxc']['cgroup']['cpuset']['cpus'])
-            if 'console' in data['lxc']:
-                if '_' in data['lxc']['console']:
-                    set_config(c, 'lxc.console', data['lxc']['console']['_'])
-                if 'logfile' in data['lxc']['console']:
-                    set_config(c, 'lxc.console.logfile', data[
-                               'lxc']['console']['logfile'])
-            if 'devttydir' in data['lxc']:
-                set_config(c, 'lxc.devttydir', data['lxc']['devttydir'])
-            if 'environment' in data['lxc']:
-                set_config(c, 'lxc.environment', data['lxc']['environment'])
-            if 'ephemeral' in data['lxc']:
-                set_config(c, 'lxc.ephemeral', data['lxc']['ephemeral'])
-            if 'group' in data['lxc']:
-                set_config(c, 'lxc.group', data['lxc']['group'])
-            if 'haltsignal' in data['lxc']:
-                set_config(c, 'lxc.haltsignal', data['lxc']['haltsignal'])
-            if 'hook' in data['lxc']:
-                if 'autodev' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.autodev', data[
-                               'lxc']['hook']['autodev'])
-                if 'clone' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.clone', data[
-                               'lxc']['hook']['clone'])
-                if 'destroy' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.destroy', data[
-                               'lxc']['hook']['destroy'])
-                if 'mount' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.mount', data[
-                               'lxc']['hook']['mount'])
-                if 'post-stop' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.post-stop',
-                               data['lxc']['hook']['post-stop'])
-                if 'pre-mount' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.pre-mount',
-                               data['lxc']['hook']['pre-mount'])
-                if 'pre-start' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.pre-start',
-                               data['lxc']['hook']['pre-start'])
-                if 'start' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.start', data[
-                               'lxc']['hook']['start'])
-                if 'stop' in data['lxc']['hook']:
-                    set_config(c, 'lxc.hook.stop', data['lxc']['hook']['stop'])
-            if 'id_map' in data['lxc']:
-                set_config(c, 'lxc.id_map', data['lxc']['id_map'])
-            if 'include' in data['lxc']:
-                set_config(c, 'lxc.include', data['lxc']['include'])
-            if 'init_cmd' in data['lxc']:
-                set_config(c, 'lxc.init_cmd', data['lxc']['init_cmd'])
-            if 'init_gid' in data['lxc']:
-                set_config(c, 'lxc.init_gid', data['lxc']['init_gid'])
-            if 'init_uid' in data['lxc']:
-                set_config(c, 'lxc.init_uid', data['lxc']['init_uid'])
-            if 'kmsg' in data['lxc']:
-                set_config(c, 'lxc.kmsg', data['lxc']['kmsg'])
-            if 'logfile' in data['lxc']:
-                set_config(c, 'lxc.logfile', data['lxc']['logfile'])
-            if 'loglevel' in data['lxc']:
-                set_config(c, 'lxc.loglevel', data['lxc']['loglevel'])
-            if 'monitor' in data['lxc']:
-                if 'unshare' in data['lxc']['monitor']:
-                    set_config(c, 'lxc.monitor.unshare', data[
-                               'lxc']['monitor']['unshare'])
-            if 'mount' in data['lxc']:
-                if '_' in data['lxc']['mount']:
-                    set_config(c, 'lxc.mount', data['lxc']['mount']['_'])
-                if 'auto' in data['lxc']['mount']:
-                    set_config(c, 'lxc.mount.auto', data[
-                               'lxc']['mount']['auto'])
-                if 'entry' in data['lxc']['mount']:
-                    set_config(c, 'lxc.mount.entry', data[
-                               'lxc']['mount']['entry'])
-            if 'network' in data['lxc']:
-                for i in range(len(data['lxc']['network'])):
-                    if 'type' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.type' %
-                                   i, data['lxc']['network']['type'])
-                    if 'veth' in data['lxc']['network']:
-                        if 'pair' in data['lxc']['network']['veth']:
-                            set_config(c, 'lxc.network.%s.veth.pair' %
-                                       i, data['lxc']['network']['veth']['pair'])
-                    if 'vlan' in data['lxc']['network']:
-                        if 'id' in data['lxc']['network']['vlan']:
-                            set_config(c, 'lxc.network.%s.vlan.id' %
-                                       i, data['lxc']['network']['vlan']['id'])
-                    if 'macvlan' in data['lxc']['network']:
-                        if 'mode' in data['lxc']['network']['macvlan']:
-                            set_config(c, 'lxc.network.%s.macvlan.mode' % i, data[
-                                       'lxc']['network']['macvlan']['mode'])
-                    if 'flags' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.flags' %
-                                   i, data['lxc']['network']['flags'])
-                    if 'link' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.link' %
-                                   i, data['lxc']['network']['link'])
-                    if 'mtu' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.mtu' %
-                                   i, data['lxc']['network']['mtu'])
-                    if 'name' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.name' %
-                                   i, data['lxc']['network']['name'])
-                    if 'hwaddr' in data['lxc']['network']:
-                        set_config(c, 'lxc.network.%s.hwaddr' %
-                                   i, data['lxc']['network']['hwaddr'])
-                    if 'ipv4' in data['lxc']['network']:
-                        if '_' in data['lxc']['network']['ipv4']:
-                            set_config(c, 'lxc.network.%s.ipv4' %
-                                       i, data['lxc']['network']['ipv4']['_'])
-                        if 'gateway' in data['lxc']['network']['ipv4']:
-                            set_config(c, 'lxc.network.%s.ipv4.gateway' % i, data[
-                                       'lxc']['network']['ipv4']['gateway'])
-                    if 'ipv6' in data['lxc']['network']:
-                        if '_' in data['lxc']['network']['ipv6']:
-                            set_config(c, 'lxc.network.%s.ipv6' %
-                                       i, data['lxc']['network']['ipv6']['_'])
-                        if 'gateway' in data['lxc']['network']['ipv6']:
-                            set_config(c, 'lxc.network.%s.ipv6.gateway' % i, data[
-                                       'lxc']['network']['ipv6']['gateway'])
-                    if 'script' in data['lxc']['network']:
-                        if 'up' in data['lxc']['network']['script']:
-                            set_config(c, 'lxc.network.%s.script.up' %
-                                       i, data['lxc']['network']['script']['up'])
-                        if 'down' in data['lxc']['network']['script']:
-                            set_config(c, 'lxc.network.%s.script.down' % i, data[
-                                       'lxc']['network']['script']['down'])
-            if 'no_new_privs' in data['lxc']:
-                set_config(c, 'lxc.no_new_privs', data['lxc']['no_new_privs'])
-            if 'pts' in data['lxc']:
-                set_config(c, 'lxc.pts', data['lxc']['pts'])
-            if 'rebootsignal' in data['lxc']:
-                set_config(c, 'lxc.rebootsignal', data['lxc']['rebootsignal'])
-            if 'rootfs' in data['lxc']:
-                if '_' in data['lxc']['rootfs']:
-                    set_config(c, 'lxc.rootfs', data['lxc']['rootfs']['_'])
-                if 'mount' in data['lxc']['rootfs']:
-                    set_config(c, 'lxc.rootfs.mount', data[
-                               'lxc']['rootfs']['mount'])
-                if 'options' in data['lxc']['rootfs']:
-                    set_config(c, 'lxc.rootfs.options', data[
-                               'lxc']['rootfs']['options'])
-                if 'backend' in data['lxc']['rootfs']:
-                    set_config(c, 'lxc.rootfs.backend', data[
-                               'lxc']['rootfs']['backend'])
-            if 'se_context' in data['lxc']:
-                set_config(c, 'lxc.se_context', data['lxc']['se_context'])
-            if 'seccomp' in data['lxc']:
-                set_config(c, 'lxc.seccomp', data['lxc']['seccomp'])
-            if 'start' in data['lxc']:
-                if 'auto' in data['lxc']['start']:
-                    set_config(c, 'lxc.start.auto', data[
-                               'lxc']['start']['auto'])
-                if 'delay' in data['lxc']['start']:
-                    set_config(c, 'lxc.start.delay', data[
-                               'lxc']['start']['delay'])
-                if 'order' in data['lxc']['start']:
-                    set_config(c, 'lxc.start.order', data[
-                               'lxc']['start']['order'])
-            if 'stopsignal' in data['lxc']:
-                set_config(c, 'lxc.stopsignal', data['lxc']['stopsignal'])
-            if 'syslog' in data['lxc']:
-                set_config(c, 'lxc.syslog', data['lxc']['syslog'])
-            if 'tty' in data['lxc']:
-                set_config(c, 'lxc.tty', data['lxc']['tty'])
-            if 'utsname' in data['lxc']:
-                set_config(c, 'lxc.utsname', data['lxc']['utsname'])
+            if 'lxc' in data:
+                if 'aa_allow_incomplete' in data['lxc']:
+                    set_config(c, 'lxc.aa_allow_incomplete', data[
+                               'lxc']['aa_allow_incomplete'])
+                if 'aa_profile' in data['lxc']:
+                    set_config(c, 'lxc.aa_profile', data['lxc']['aa_profile'])
+                if 'arch' in data['lxc']:
+                    set_config(c, 'lxc.arch', data['lxc']['arch'])
+                if 'autodev' in data['lxc']:
+                    set_config(c, 'lxc.autodev', data['lxc']['autodev'])
+                if 'cap' in data['lxc']:
+                    if 'drop' in data['lxc']['cap']:
+                        set_config(c, 'lxc.cap.drop', data['lxc']['cap']['drop'])
+                    if 'keep' in data['lxc']['cap']:
+                        set_config(c, 'lxc.cap.keep', data['lxc']['cap']['keep'])
+                if 'cgroup' in data['lxc']:
+                    if 'memory' in data['lxc']['cgroup']:
+                        if 'limit_in_bytes' in data['lxc']['cgroup']['memory']:
+                            set_config(c, 'lxc.cgroup.memory.limit_in_bytes', data[
+                                       'lxc']['cgroup']['memory']['limit_in_bytes'])
+                        if 'memsw' in data['lxc']['cgroup']['memory']:
+                            if 'limit_in_bytes' in data['lxc']['cgroup']['memory']['memsw']:
+                                set_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes', data[
+                                           'lxc']['cgroup']['memory']['memsw']['limit_in_bytes'])
+                    if 'cpu' in data['lxc']['cgroup']:
+                        if 'shares' in data['lxc']['cgroup']['cpu']:
+                            set_config(c, 'lxc.cgroup.cpu.shares', data[
+                                       'lxc']['cgroup']['cpu']['shares'])
+                    if 'cpuset' in data['lxc']['cgroup']:
+                        if 'cpus' in data['lxc']['cgroup']['cpuset']:
+                            set_config(c, 'lxc.cgroup.cpuset.cpus', data[
+                                       'lxc']['cgroup']['cpuset']['cpus'])
+                if 'console' in data['lxc']:
+                    if '_' in data['lxc']['console']:
+                        set_config(c, 'lxc.console', data['lxc']['console']['_'])
+                    if 'logfile' in data['lxc']['console']:
+                        set_config(c, 'lxc.console.logfile', data[
+                                   'lxc']['console']['logfile'])
+                if 'devttydir' in data['lxc']:
+                    set_config(c, 'lxc.devttydir', data['lxc']['devttydir'])
+                if 'environment' in data['lxc']:
+                    set_config(c, 'lxc.environment', data['lxc']['environment'])
+                if 'ephemeral' in data['lxc']:
+                    set_config(c, 'lxc.ephemeral', data['lxc']['ephemeral'])
+                if 'group' in data['lxc']:
+                    set_config(c, 'lxc.group', data['lxc']['group'])
+                if 'haltsignal' in data['lxc']:
+                    set_config(c, 'lxc.haltsignal', data['lxc']['haltsignal'])
+                if 'hook' in data['lxc']:
+                    if 'autodev' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.autodev', data[
+                                   'lxc']['hook']['autodev'])
+                    if 'clone' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.clone', data[
+                                   'lxc']['hook']['clone'])
+                    if 'destroy' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.destroy', data[
+                                   'lxc']['hook']['destroy'])
+                    if 'mount' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.mount', data[
+                                   'lxc']['hook']['mount'])
+                    if 'post-stop' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.post-stop',
+                                   data['lxc']['hook']['post-stop'])
+                    if 'pre-mount' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.pre-mount',
+                                   data['lxc']['hook']['pre-mount'])
+                    if 'pre-start' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.pre-start',
+                                   data['lxc']['hook']['pre-start'])
+                    if 'start' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.start', data[
+                                   'lxc']['hook']['start'])
+                    if 'stop' in data['lxc']['hook']:
+                        set_config(c, 'lxc.hook.stop', data['lxc']['hook']['stop'])
+                if 'id_map' in data['lxc']:
+                    set_config(c, 'lxc.id_map', data['lxc']['id_map'])
+                if 'include' in data['lxc']:
+                    set_config(c, 'lxc.include', data['lxc']['include'])
+                if 'init_cmd' in data['lxc']:
+                    set_config(c, 'lxc.init_cmd', data['lxc']['init_cmd'])
+                if 'init_gid' in data['lxc']:
+                    set_config(c, 'lxc.init_gid', data['lxc']['init_gid'])
+                if 'init_uid' in data['lxc']:
+                    set_config(c, 'lxc.init_uid', data['lxc']['init_uid'])
+                if 'kmsg' in data['lxc']:
+                    set_config(c, 'lxc.kmsg', data['lxc']['kmsg'])
+                if 'logfile' in data['lxc']:
+                    set_config(c, 'lxc.logfile', data['lxc']['logfile'])
+                if 'loglevel' in data['lxc']:
+                    set_config(c, 'lxc.loglevel', data['lxc']['loglevel'])
+                if 'monitor' in data['lxc']:
+                    if 'unshare' in data['lxc']['monitor']:
+                        set_config(c, 'lxc.monitor.unshare', data[
+                                   'lxc']['monitor']['unshare'])
+                if 'mount' in data['lxc']:
+                    if '_' in data['lxc']['mount']:
+                        set_config(c, 'lxc.mount', data['lxc']['mount']['_'])
+                    if 'auto' in data['lxc']['mount']:
+                        set_config(c, 'lxc.mount.auto', data[
+                                   'lxc']['mount']['auto'])
+                    if 'entry' in data['lxc']['mount']:
+                        set_config(c, 'lxc.mount.entry', data[
+                                   'lxc']['mount']['entry'])
+                if 'network' in data['lxc']:
+                    for i in range(len(data['lxc']['network'])):
+                        if 'type' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.type' %
+                                       i, data['lxc']['network']['type'])
+                        if 'veth' in data['lxc']['network']:
+                            if 'pair' in data['lxc']['network']['veth']:
+                                set_config(c, 'lxc.network.%s.veth.pair' %
+                                           i, data['lxc']['network']['veth']['pair'])
+                        if 'vlan' in data['lxc']['network']:
+                            if 'id' in data['lxc']['network']['vlan']:
+                                set_config(c, 'lxc.network.%s.vlan.id' %
+                                           i, data['lxc']['network']['vlan']['id'])
+                        if 'macvlan' in data['lxc']['network']:
+                            if 'mode' in data['lxc']['network']['macvlan']:
+                                set_config(c, 'lxc.network.%s.macvlan.mode' % i, data[
+                                           'lxc']['network']['macvlan']['mode'])
+                        if 'flags' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.flags' %
+                                       i, data['lxc']['network']['flags'])
+                        if 'link' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.link' %
+                                       i, data['lxc']['network']['link'])
+                        if 'mtu' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.mtu' %
+                                       i, data['lxc']['network']['mtu'])
+                        if 'name' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.name' %
+                                       i, data['lxc']['network']['name'])
+                        if 'hwaddr' in data['lxc']['network']:
+                            set_config(c, 'lxc.network.%s.hwaddr' %
+                                       i, data['lxc']['network']['hwaddr'])
+                        if 'ipv4' in data['lxc']['network']:
+                            if '_' in data['lxc']['network']['ipv4']:
+                                set_config(c, 'lxc.network.%s.ipv4' %
+                                           i, data['lxc']['network']['ipv4']['_'])
+                            if 'gateway' in data['lxc']['network']['ipv4']:
+                                set_config(c, 'lxc.network.%s.ipv4.gateway' % i, data[
+                                           'lxc']['network']['ipv4']['gateway'])
+                        if 'ipv6' in data['lxc']['network']:
+                            if '_' in data['lxc']['network']['ipv6']:
+                                set_config(c, 'lxc.network.%s.ipv6' %
+                                           i, data['lxc']['network']['ipv6']['_'])
+                            if 'gateway' in data['lxc']['network']['ipv6']:
+                                set_config(c, 'lxc.network.%s.ipv6.gateway' % i, data[
+                                           'lxc']['network']['ipv6']['gateway'])
+                        if 'script' in data['lxc']['network']:
+                            if 'up' in data['lxc']['network']['script']:
+                                set_config(c, 'lxc.network.%s.script.up' %
+                                           i, data['lxc']['network']['script']['up'])
+                            if 'down' in data['lxc']['network']['script']:
+                                set_config(c, 'lxc.network.%s.script.down' % i, data[
+                                           'lxc']['network']['script']['down'])
+                if 'no_new_privs' in data['lxc']:
+                    set_config(c, 'lxc.no_new_privs', data['lxc']['no_new_privs'])
+                if 'pts' in data['lxc']:
+                    set_config(c, 'lxc.pts', data['lxc']['pts'])
+                if 'rebootsignal' in data['lxc']:
+                    set_config(c, 'lxc.rebootsignal', data['lxc']['rebootsignal'])
+                if 'rootfs' in data['lxc']:
+                    if '_' in data['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs', data['lxc']['rootfs']['_'])
+                    if 'mount' in data['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.mount', data[
+                                   'lxc']['rootfs']['mount'])
+                    if 'options' in data['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.options', data[
+                                   'lxc']['rootfs']['options'])
+                    if 'backend' in data['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.backend', data[
+                                   'lxc']['rootfs']['backend'])
+                if 'se_context' in data['lxc']:
+                    set_config(c, 'lxc.se_context', data['lxc']['se_context'])
+                if 'seccomp' in data['lxc']:
+                    set_config(c, 'lxc.seccomp', data['lxc']['seccomp'])
+                if 'start' in data['lxc']:
+                    if 'auto' in data['lxc']['start']:
+                        set_config(c, 'lxc.start.auto', data[
+                                   'lxc']['start']['auto'])
+                    if 'delay' in data['lxc']['start']:
+                        set_config(c, 'lxc.start.delay', data[
+                                   'lxc']['start']['delay'])
+                    if 'order' in data['lxc']['start']:
+                        set_config(c, 'lxc.start.order', data[
+                                   'lxc']['start']['order'])
+                if 'stopsignal' in data['lxc']:
+                    set_config(c, 'lxc.stopsignal', data['lxc']['stopsignal'])
+                if 'syslog' in data['lxc']:
+                    set_config(c, 'lxc.syslog', data['lxc']['syslog'])
+                if 'tty' in data['lxc']:
+                    set_config(c, 'lxc.tty', data['lxc']['tty'])
+                if 'utsname' in data['lxc']:
+                    set_config(c, 'lxc.utsname', data['lxc']['utsname'])
 
             return Containers.get(self, container.id)
-
-        return {'errors': 'Container %s doesn\'t exists!' % container}, 404
+        return 404
 
     @user_has('ct_delete')
     @api.doc(responses={
@@ -697,7 +697,7 @@ class Containers(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             if c.running:
                 if not c.stop():
                     return 409
@@ -718,7 +718,7 @@ class ContainersStart(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             c.start()
             c.wait('RUNNING', 3)
             return 200
@@ -737,7 +737,7 @@ class ContainersFreeze(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             c.freeze()
             c.wait('FROZEN', 3)
             return 200
@@ -756,7 +756,7 @@ class ContainersUnfreeze(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             c.unfreeze()
             c.wait('RUNNING', 3)
             return 200
@@ -775,7 +775,7 @@ class ContainersStop(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             c.stop()
             c.wait('STOPPED', 3)
             return 200
@@ -794,7 +794,7 @@ class ContainersShutdown(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             c.shutdown(10)
             c.wait('STOPPED', 3)
             return 200
@@ -813,7 +813,7 @@ class ContainersRestart(Resource):
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
-        if c.defined and id in current_identity.containers:
+        if c.defined and (id in current_identity.containers or current_identity.admin):
             ContainersStop.post(self, id)
             ContainersStart.post(self, id)
             return 200
