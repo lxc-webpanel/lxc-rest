@@ -5,8 +5,6 @@ RESTful API for LXC and LXC WEB PANEL
 [![Build Status](https://travis-ci.org/lxc-webpanel/lxc-rest.svg?branch=master)](https://travis-ci.org/lxc-webpanel/lxc-rest)
 [![Python version](https://img.shields.io/badge/Python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 
-**ALPHA**
-*Do not run it in production*
 
 ## Installation
 ```
@@ -23,12 +21,26 @@ python3 install/setup.py
 python3 run.py
 ```
 
+## Usage
+#### Auth
+
+**POST** /api/v1/auth
+```json
+{
+	"username": string,
+	"password": string
+}
+```
+
+#### Doc
+From your browser, get the swagger doc at [http://localhost:5000/doc/](http://localhost:5000/doc/)
+
 ## Documentation
 
 * [Swagger](http://petstore.swagger.io/?url=http://lxc-webpanel.github.io/doc/swagger.json)
 
 
-### Configuration
+## Configuration
 You can store instance configuration in `instance/config.py`
 
 or
