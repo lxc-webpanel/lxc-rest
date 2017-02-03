@@ -27,8 +27,8 @@ python3 run.py
 **POST** /api/v1/auth
 ```json
 {
-	"username": string,
-	"password": string
+	"username": "admin",
+	"password": "admin"
 }
 ```
 
