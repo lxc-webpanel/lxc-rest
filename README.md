@@ -70,3 +70,7 @@ or
 Set your own env var :
 
 `export LWP_CONFIG_FILE='/path/to/config/production.py'`
+
+
+## Credits
+* Logo : [Thibaut Abou Mrad](http://www.thibautaboumrad.fr/)
