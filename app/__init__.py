@@ -3,7 +3,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_restplus import Api
-from flask_jwt import JWT
+from flask_jwt import JWT, JWTError
 from flask_cors import CORS
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
@@ -33,6 +33,7 @@ try:
 except KeyError:
     pass
 
+
 def authenticate(username, password):
     user = User.query.filter_by(username=username).first()
 
@@ -42,11 +43,24 @@ def authenticate(username, password):
     return user
 
 
+class ExceptionAwareApi(Api):
+
+    def handle_error(self, e):
+        if isinstance(e, JWTError):
+            code = 401
+            data = {'status_code': code,
+                    'message': "Authorization Required. Request does not contain an access token"}
+        else:
+            # Did not match a custom exception, continue normally
+            return super(ExceptionAwareApi, self).handle_error(e)
+        return self.make_response(data, code)
+
+
 cors = CORS(app, resources={r'/*': {'origins': app.config['ALLOW_ORIGIN']}})
 db = SQLAlchemy(app, session_options={
                 'autoflush': False, 'autocommit': False, "expire_on_commit": False})
-api = Api(app, doc='/doc/', title='LXC Web Panel API documentation',
-          description='https://github.com/lxc-webpanel/lxc-rest')
+api = ExceptionAwareApi(app, doc='/doc/', title='LXC Web Panel API documentation',
+                        description='https://github.com/lxc-webpanel/lxc-rest')
 nslxc = api.namespace('api/v1/lxc/', description='Operations related to LXC')
 nslwp = api.namespace(
     'api/v1/lwp/', description='Operations related to LXC Web Panel')
