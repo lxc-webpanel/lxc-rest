@@ -27,7 +27,7 @@ def _run(cmd, output=False):
         return False
 
 
-def ct_infos(container, id=None):
+def ct_infos(container):
     c = lxc.Container(container)
 
     def get_config(c, config_item, default=None):
@@ -59,7 +59,10 @@ def ct_infos(container, id=None):
                 if not isinstance(value, list):
                     value = default
         except KeyError:
+
             value = default
+        # if config_item == 'lxc.group':
+            # print('end %s' % value)
         return value
 
     network = []
@@ -99,7 +102,6 @@ def ct_infos(container, id=None):
 
     infos = {
         'name': c.name,
-        'id': id,
         'pid': c.init_pid,
         'state': c.state,
         'lxc': {
@@ -195,11 +197,13 @@ def host_disk_usage(partition='/'):
     usage = _run('df -m %s | tail -n -1' % partition,
                  output=True).decode("utf-8").split()
 
-    return dict(disk=usage[0],
-                total=int(usage[1]),
-                used=int(usage[2]),
-                free=int(usage[3]),
-                percent=int(usage[4].strip('%')))
+    return {
+        'disk': usage[0],
+        'total': int(usage[1]),
+        'used': int(usage[2]),
+        'free': int(usage[3]),
+        'percent': int(usage[4].strip('%'))
+        }
 
 
 def host_cpu_infos():

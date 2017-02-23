@@ -3,63 +3,6 @@
 from flask_restplus import fields
 from app import api
 
-# Users JSON fields
-users_fields_get = api.model('UsersModelGet', {
-    'admin': fields.Boolean(default=False),
-    'name': fields.String,
-    'email': fields.String,
-    'groups': fields.List(fields.Integer(min=1)),
-    'containers': fields.List(fields.Integer(min=1))
-})
-
-users_fields_put = api.inherit('UsersModelPut', users_fields_get, {
-    'password': fields.String
-})
-
-users_fields_post = api.inherit('UsersModelPost', users_fields_put, {
-    'username': fields.String(required=True),
-    'name': fields.String(required=True),
-    'groups': fields.List(fields.Integer(min=1), required=True),
-    'password': fields.String(required=True)
-})
-
-users_fields = api.inherit('UsersModel', users_fields_get, {
-    'id': fields.Integer
-})
-
-
-# Groups JSON fields
-groups_fields_put = api.model('GroupsModelPut', {
-    'name': fields.String,
-    'abilities': fields.List(fields.Integer(min=1)),
-    'users': fields.List(fields.Integer(min=1))
-})
-
-groups_fields_post = api.inherit('GroupsModelPost', groups_fields_put, {
-    'name': fields.String(required=True)
-})
-
-groups_fields = api.inherit('GroupsModel', groups_fields_put, {
-    'id': fields.Integer
-})
-
-
-# Abilities JSON fields
-abilities_fields_put = api.model('AbilitiesModelPut', {
-    'groups': fields.List(fields.Integer(min=1))
-})
-
-abilities_fields = api.inherit('AbilitiesModel', abilities_fields_put, {
-    'id': fields.Integer,
-    'name': fields.String
-})
-
-
-# HostReboot JSON fields
-host_reboot_fields_post = api.model('HostRebootModelPost', {
-    'message': fields.String
-})
-
 
 lxc_container_conf = api.model('LxcContainerConf', {
     'aa_allow_incomplete': fields.Integer(default=0),
@@ -120,7 +63,7 @@ lxc_container_conf = api.model('LxcContainerConf', {
         'auto': fields.String,
         'entry': fields.List(fields.String)
     })),
-    'network': fields.List(fields.Nested(api.model('LxcNetwork', {
+    'network': fields.Nested(api.model('LxcNetwork', {
         'type': fields.String,
         'veth': fields.Nested(api.model('LxcNetworkVeth', {
             'pair': fields.Integer
@@ -148,7 +91,7 @@ lxc_container_conf = api.model('LxcContainerConf', {
             'up': fields.String,
             'down': fields.String
         }))
-    }))),
+    }), as_list=True),
     'no_new_privs': fields.Integer(default=0),
     'pts': fields.String,
     'rebootsignal': fields.String(default='SIGINT'),
@@ -171,22 +114,61 @@ lxc_container_conf = api.model('LxcContainerConf', {
     'utsname': fields.String
 })
 
-
-containers_fields_put = api.model('ContainersModelPut', {
+containers_fields_attributes = api.model('ContainersFieldsAttributes', {
     'name': fields.String,
+    'pid': fields.Integer,
+    'state': fields.String,
     'lxc': fields.Nested(lxc_container_conf)
 })
 
-containers_fields_post = api.inherit('ContainersModelPost', containers_fields_put, {
-    'name': fields.String(required=True),
-    'template': fields.Nested(api.model('ContainersModelTemplate', {
-        'name': fields.String(required=True),
-        'args': fields.String
+containers_fields_attributes_post = api.model('ContainersFieldsAttributesPost', {
+    'name': fields.String(required=True, pattern='^(?!\s*$).+'),
+    'template': fields.Nested(api.model('ContainersTemplatePost', {
+        'name': fields.String(required=True, pattern='^(?!\s*$).+'),
+        'args': fields.List(fields.String)
+    })),
+    'lxc': fields.Nested(lxc_container_conf)
+})
+
+containers_fields = api.model('ContainersFields', {
+    'type': fields.String(pattern='containers'),
+    'id': fields.Integer,
+    'attributes': fields.Nested(containers_fields_attributes),
+})
+
+from .users import *
+
+containers_fields_with_relationships = api.model('ContainersFieldsWithRelationships', {
+    'relationships': fields.Nested(api.model('ContainersRelationships', {
+        'users': fields.Nested(api.model('ContainersData', {
+            'data': fields.Nested(api.models['UsersFields'], as_list=True)
+        }))
     }))
 })
 
-containers_fields = api.inherit('ContainersModel', containers_fields_put, {
+containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithRelationshipsPost', {
+    'relationships': fields.Nested(api.model('ContainersRelationshipsPost', {
+        'users': fields.Nested(api.model('ContainersDataPost', {
+            'data': fields.Nested(api.model('ContainersPostData', {
+                'type': fields.String(pattern='users'),
+                'id': fields.Integer
+            }), as_list=True)
+        })),
+    }))
+})
+
+containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships, {
+    'type': fields.String,
     'id': fields.Integer,
-    'pid': fields.Integer,
-    'state': fields.String
+    'attributes': fields.Nested(containers_fields_attributes),
+})
+
+containers_fields_post = api.inherit('ContainersFieldsPost', containers_fields_with_relationships_post_put, {
+    'type': fields.String(pattern='containers'),
+    'attributes': fields.Nested(containers_fields_attributes_post),
+})
+
+containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_with_relationships_post_put, {
+    'type': fields.String(pattern='containers'),
+    'attributes': fields.Nested(containers_fields_attributes),
 })

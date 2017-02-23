@@ -2,12 +2,16 @@
 # -*- coding: utf-8 -*-
 from flask import request
 from flask_restplus import Resource, reqparse
-from flask_restplus.reqparse import Argument, RequestParser
+from flask_restplus.reqparse import Argument
 from flask_jwt import jwt_required, current_identity
 from app import db, api
 from .models import *
-from .fields import *
 from .decorators import *
+from .fields.users import *
+from .fields.groups import *
+from .fields.abilities import *
+from .fields.containers import *
+from .fields.hosts import *
 import lwp
 import lxc
 import os.path
@@ -16,79 +20,70 @@ import re
 import gzip
 import socket
 import subprocess
-import json
-
-
-users_list_parser = api.parser()
-users_list_parser.add_argument(
-    'username', type=str, required=True, location='json')
-users_list_parser.add_argument(
-    'name', type=str, required=True, location='json')
-users_list_parser.add_argument('email', type=str, location='json')
-users_list_parser.add_argument(
-    'groups', type=list, required=True, location='json')
-users_list_parser.add_argument('containers', type=list, location='json')
-users_list_parser.add_argument(
-    'password', type=str, required=True, location='json')
 
 
 class UsersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos_all')
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self):
         """
         Get users list
         """
-        return User.query.all()
+        users = User.query.all()
+        users_list = []
+
+        for user in users:
+            users_list.append(user.__jsonapi__())
+
+        return users_list.__jsonapi__()
 
     @user_has('users_create')
-    @api.expect(users_fields_post)
-    @api.marshal_with(users_fields, envelope='data')
+    @api.expect(users_fields_post, validate=True)
+    @api.marshal_with(users_fields_get, envelope='data')
     def post(self):
         """
         Create user
         """
-        args = users_list_parser.parse_args()
-
-        if User.query.filter_by(username=args.username).first():
-            return {'errors': 'User already exists'}, 409
+        data = request.get_json()
+        if User.query.filter_by(username=data['attributes']['username']).first():
+            api.abort(code=409, message='User already exists')
 
         user = User()
 
-        user.username = args.username
-        user.name = args.name
-        user.groups = args.groups
+        user.username = data['attributes']['username']
+        user.name = data['attributes']['name']
+        user.hash_password(data['attributes']['password'])
 
-        if args.admin and current_identity.admin:
-            user.admin = args.admin
-        if args.email:
-            user.email = args.email
-        if args.containers:
-            user.containers = args.containers
+        if 'admin' in data['attributes'] and current_identity.admin:
+            user.admin = data['attributes']['admin']
+        if 'email' in data['attributes']:
+            user.email = data['attributes']['email']
 
-        user.hash_password(args.password)
+        try:
+            user.groups = list(id['id'] for id in data[
+                               'relationships']['groups']['data'])
+        except KeyError:
+            pass
+
+        try:
+            user.containers = list(id['id'] for id in data[
+                                   'relationships']['containers']['data'])
+        except KeyError:
+            pass
 
         db.session.add(user)
         db.session.commit()
 
-        return user, 201
-
-
-users_parser = api.parser()
-users_parser.add_argument('name', type=str, location='json')
-users_parser.add_argument('email', type=str, location='json')
-users_parser.add_argument('groups', type=list, location='json')
-users_parser.add_argument('containers', type=list, location='json')
-users_parser.add_argument('password', type=str, location='json')
+        return user.__jsonapi__(), 201
 
 
 class Users(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos')
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self, id):
         """
         Get user
@@ -96,13 +91,13 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'errors': "User not found"}, 404
+            api.abort(code=404, message='User not found')
 
-        return user
+        return user.__jsonapi__()
 
     @user_has('users_update')
-    @api.expect(users_fields_put)
-    @api.marshal_with(users_fields, envelope='data')
+    @api.expect(users_fields_put, validate=True)
+    @api.marshal_with(users_fields_get, envelope='data')
     def put(self, id):
         """
         Update user
@@ -110,27 +105,35 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'errors': "User not found"}, 404
+            api.abort(code=404, message='User not found')
 
-        args = users_parser.parse_args()
+        data = request.get_json()
 
-        if args.admin and current_identity.admin:
-            user.admin = args.admin
-        if args.name:
-            user.name = args.name
-        if args.email:
-            user.email = args.email
-        if args.groups:
-            user.groups = args.groups
-        if args.containers:
-            user.containers = args.containers
-        if args.password:
-            user.hash_password(args.password)
+        if 'name' in data['attributes']:
+            user.name = data['attributes']['name']
+        if 'admin' in data['attributes'] and current_identity.admin:
+            user.admin = data['attributes']['admin']
+        if 'email' in data['attributes']:
+            user.email = data['attributes']['email']
+        if 'password' in data['attributes']:
+            user.hash_password(data['attributes']['password'])
 
-        if len(args) > 0:
+        try:
+            user.groups = list(id['id'] for id in data[
+                               'relationships']['groups']['data'])
+        except KeyError:
+            pass
+
+        try:
+            user.containers = list(id['id'] for id in data[
+                                   'relationships']['containers']['data'])
+        except KeyError:
+            pass
+
+        if len(data) > 0:
             db.session.commit()
 
-        return user
+        return user.__jsonapi__()
 
     @user_has('users_delete')
     def delete(self, id):
@@ -140,52 +143,60 @@ class Users(Resource):
         user = User.query.get(id)
 
         if not user:
-            return {'errors': "User not found"}, 404
+            api.abort(code=404, message='User not found')
 
         db.session.delete(user)
         db.session.commit()
 
-        return {'message': 'User %s deleted' % user.name}, 200
+        return {}, 204
 
 
 class Me(Resource):
     decorators = [jwt_required()]
 
-    @api.marshal_with(users_fields, envelope='data')
+    @api.marshal_with(users_fields_get, envelope='data')
     def get(self):
         """
         Get me
         """
-        return current_identity
+        return current_identity.__jsonapi__()
 
     @user_has('me_edit')
-    @api.expect(users_fields_put)
-    @api.marshal_with(users_fields, envelope='data')
+    @api.expect(users_fields_put, validate=True)
+    @api.marshal_with(users_fields_get, envelope='data')
     def put(self):
         """
         Update me
         """
         user = User.query.get(current_identity.id)
 
-        args = users_parser.parse_args()
+        data = request.get_json()
 
-        if args.admin and current_identity.admin:
-            user.admin = args.admin
-        if args.name:
-            user.name = args.name
-        if args.email:
-            user.email = args.email
-        if args.groups:
-            user.groups = args.groups
-        if args.containers:
-            user.containers = args.containers
-        if args.password:
-            user.hash_password(args.password)
+        if 'name' in data['attributes']:
+            user.name = data['attributes']['name']
+        if 'admin' in data['attributes'] and current_identity.admin:
+            user.admin = data['attributes']['admin']
+        if 'email' in data['attributes']:
+            user.email = data['attributes']['email']
+        if 'password' in data['attributes']:
+            user.hash_password(data['attributes']['password'])
 
-        if len(args) > 0:
+        try:
+            user.groups = list(id['id'] for id in data[
+                               'relationships']['groups']['data'])
+        except KeyError:
+            pass
+
+        try:
+            user.containers = list(id['id'] for id in data[
+                                   'relationships']['containers']['data'])
+        except KeyError:
+            pass
+
+        if len(data) > 0:
             db.session.commit()
 
-        return user
+        return user.__jsonapi__()
 
     @user_has('me_edit')
     def delete(self):
@@ -197,60 +208,60 @@ class Me(Resource):
         db.session.delete(user)
         db.session.commit()
 
-        return {'message': 'User %s deleted' % user.name}, 200
-
-
-groups_list_parser = api.parser()
-groups_list_parser.add_argument(
-    'name', type=str, required=True, location='json')
-groups_list_parser.add_argument('abilities', type=list, location='json')
-groups_list_parser.add_argument('users', type=list, location='json')
+        return {}, 204
 
 
 class GroupsList(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos_all')
-    @api.marshal_with(groups_fields, envelope='data')
+    @api.marshal_with(groups_fields_get, envelope='data')
     def get(self):
         """
         Get groups list
         """
-        return Group.query.all()
+        groups = Group.query.all()
+        groups_list = []
+
+        for group in groups:
+            groups_list.append(group.__jsonapi__())
+
+        return groups_list
 
     @user_has('groups_create')
-    @api.expect(groups_fields_post)
-    @api.marshal_with(groups_fields, envelope='data')
+    @api.expect(groups_fields_post, validate=True)
+    @api.marshal_with(groups_fields_get, envelope='data')
     def post(self):
         """
         Create group
         """
-        args = groups_list_parser.parse_args()
+        data = request.get_json()
 
-        group = Group(name=args.name)
+        group = Group(name=data['attributes']['name'])
 
-        if args.abilities:
-            group.abilities = args.abilities
-        if args.users:
-            group.users = args.users
+        try:
+            group.abilities = list(id['id'] for id in data[
+                                   'relationships']['abilities']['data'])
+        except KeyError:
+            pass
+
+        try:
+            group.users = list(id['id'] for id in data[
+                'relationships']['users']['data'])
+        except KeyError:
+            pass
 
         db.session.add(group)
         db.session.commit()
 
-        return group, 201
-
-
-groups_parser = api.parser()
-groups_parser.add_argument('name', type=str, location='json')
-groups_parser.add_argument('abilities', type=list, location='json')
-groups_parser.add_argument('users', type=list, location='json')
+        return group.__jsonapi__(), 201
 
 
 class Groups(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos')
-    @api.marshal_with(groups_fields, envelope='data')
+    @api.marshal_with(groups_fields_get, envelope='data')
     def get(self, id):
         """
         Get group
@@ -258,32 +269,43 @@ class Groups(Resource):
         group = Group.query.get(id)
 
         if not group:
-            return {'errors': "Group not found"}, 404
+            api.abort(code=404, message='Group not found')
 
-        return group
+        return group.__jsonapi__()
 
     @user_has('groups_update')
-    @api.expect(groups_fields_put)
-    @api.marshal_with(groups_fields, envelope='data')
+    @api.expect(groups_fields_put, validate=True)
+    @api.marshal_with(groups_fields_get, envelope='data')
     def put(self, id):
         """
         Update group
         """
         group = Group.query.get(id)
 
-        args = groups_parser.parse_args()
+        if not group:
+            api.abort(code=404, message='Group not found')
 
-        if args.name:
-            group.name = args.name
-        if args.abilities:
-            group.abilities = args.abilities
-        if args.users:
-            group.users = args.users
+        data = request.get_json()
 
-        if len(args) > 0:
+        if 'name' in data['attributes']:
+            group.name = data['attributes']['name']
+
+        try:
+            group.abilities = list(id['id'] for id in data[
+                                   'relationships']['abilities']['data'])
+        except KeyError:
+            pass
+
+        try:
+            group.users = list(id['id'] for id in data[
+                'relationships']['users']['data'])
+        except KeyError:
+            pass
+
+        if len(data) > 0:
             db.session.commit()
 
-        return group
+        return group.__jsonapi__()
 
     @user_has('groups_delete')
     def delete(self, id):
@@ -293,35 +315,37 @@ class Groups(Resource):
         group = Group.query.get(id)
 
         if not group:
-            return {'errors': 'Group not found'}, 404
+            api.abort(code=404, message='Group not found')
 
         db.session.delete(group)
         db.session.commit()
 
-        return {'message': 'Group %s deleted' % group.name}, 200
+        return {}, 204
 
 
 class AbilitiesList(Resource):
     decorators = [jwt_required()]
 
     @user_has('abilities_infos_all')
-    @api.marshal_with(abilities_fields, envelope='data')
+    @api.marshal_with(abilities_fields_get, envelope='data')
     def get(self):
         """
         Get abilities list
         """
-        return Ability.query.all()
+        abilities = Ability.query.all()
+        abilities_list = []
 
+        for ability in abilities:
+            abilities_list.append(ability.__jsonapi__())
 
-abilities_parser = api.parser()
-abilities_parser.add_argument('groups', type=list, location='json')
+        return abilities_list
 
 
 class Abilities(Resource):
     decorators = [jwt_required()]
 
     @user_has('abilities_infos')
-    @api.marshal_with(abilities_fields, envelope='data')
+    @api.marshal_with(abilities_fields_get, envelope='data')
     def get(self, id):
         """
         Get ability
@@ -329,48 +353,30 @@ class Abilities(Resource):
         ability = Ability.query.get(id)
 
         if not ability:
-            return {'errors': "Ability not found"}, 404
+            api.abort(code=404, message='Ability not found')
 
-        return ability
+        return ability.__jsonapi__()
 
     @user_has('abilities_update')
-    @api.expect(abilities_fields_put)
-    @api.marshal_with(abilities_fields, envelope='data')
+    @api.expect(abilities_fields_put, validate=True)
+    @api.marshal_with(abilities_fields_get, envelope='data')
     def put(self, id):
         """
         Update ability
         """
         ability = Ability.query.get(id)
 
-        args = abilities_parser.parse_args()
+        data = request.get_json()
 
-        if args.groups:
-            ability.groups = args.groups
+        try:
+            if len(data['relationships']['groups']['data']) >= 0:
+                ability.groups = list(id['id'] for id in data[
+                                      'relationships']['groups']['data'])
+                db.session.commit()
+        except KeyError:
+            pass
 
-        if len(args) > 0:
-            db.session.commit()
-
-        return ability
-
-###########
-# LXC API #
-###########
-
-
-# class LxcTemplatesList(Resource):
-#     decorators = [jwt_required()]
-
-#     @user_has('lxc_infos')
-#     def get(self):
-#         return {'templates': lwp.get_templates_list()}, 200
-
-
-# class LxcTemplatesInfos(Resource):
-#     decorators = [jwt_required()]
-
-#     @user_has('lxc_infos')
-#     def get(self, template):
-#         return lwp.get_template_options(template), 200
+        return ability.__jsonapi__()
 
 
 ##################
@@ -380,7 +386,7 @@ class ContainersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('ct_infos')
-    @api.marshal_with(containers_fields, envelope='data')
+    @api.marshal_with(containers_fields_get, envelope='data')
     def get(self):
         """
         Get containers list
@@ -390,14 +396,16 @@ class ContainersList(Resource):
         for c in lxc.list_containers():
             container = Container.query.filter_by(name=c).first()
             if container.id in current_identity.containers or current_identity.admin:
-                infos = lwp.ct_infos(c, id=container.id)
-                containers.append(infos)
+                infos = lwp.ct_infos(c)
+                container_json = container.__jsonapi__()
+                container_json['attributes'] = infos
+                containers.append(container_json)
 
         return containers
 
     @user_has('ct_create')
     @api.expect(containers_fields_post)
-    @api.marshal_with(containers_fields_post, envelope='data')
+    @api.marshal_with(containers_fields_get, envelope='data')
     @api.doc(responses={
         201: 'Container created',
         409: 'Container already exists',
@@ -409,39 +417,43 @@ class ContainersList(Resource):
         """
         data = request.get_json()
 
-        c = lxc.Container(data['name'])
-
-        if 'name' in data:
+        if 'name' in data['attributes']:
+            c = lxc.Container(data['attributes']['name'])
             if not c.defined:
                 try:
-                    if not isinstance(data['template']['args'], str):
-                        data['template']['args'] = ''
+                    if not isinstance(data['attributes']['template']['args'], str):
+                        data['attributes']['template']['args'] = ''
                 except KeyError:
-                    data['template']['args'] = ''
-                if not c.create(template=data['template']['name'], flags=lxc.LXC_CREATE_QUIET, args=data['template']['args'], bdevtype=None):
-                    return {}, 500
+                    data['attributes']['template']['args'] = ''
+                if not c.create(
+                    template=data['attributes']['template']['name'],
+                    flags=lxc.LXC_CREATE_QUIET,
+                    args=data['attributes']['template']['args'],
+                    bdevtype=None
+                ):
+                    api.abort(code=500, message='Can\'t create container')
 
                 # Add container to database
-                container = Container(name=data['name'])
+                container = Container(name=data['attributes']['name'])
                 db.session.add(container)
                 db.session.commit()
                 # Get container ID
                 container = Container.query.filter_by(
-                    name=data['name']).first()
+                    name=data['attributes']['name']).first()
                 # Add container to allowed user's containers
                 user = User.query.get(current_identity.id)
                 user.containers.append(container.id)
                 db.session.commit()
 
                 return Containers.put(self, container.id, d=data), 201
-            return {}, 409
+            api.abort(code=409, message='Container already exists')
 
 
 class Containers(Resource):
     decorators = [jwt_required()]
 
     @user_has('ct_infos')
-    @api.marshal_with(containers_fields, envelope='data')
+    @api.marshal_with(containers_fields_get, envelope='data')
     def get(self, id):
         """
         Get container
@@ -450,14 +462,16 @@ class Containers(Resource):
         c = lxc.Container(container.name)
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
-            response = lwp.ct_infos(container.name, id=id)
-            return response
+            infos = lwp.ct_infos(container.name)
+            container_json = container.__jsonapi__()
+            container_json['attributes'] = infos
 
-        return 404
+            return container_json
+        api.abort(code=404, message='Container doesn\'t exists')
 
     @user_has('ct_update')
     @api.expect(containers_fields_put)
-    @api.marshal_with(containers_fields_put, envelope='data')
+    @api.marshal_with(containers_fields_get, envelope='data')
     def put(self, id, d=None):
         """
         Update container
@@ -465,8 +479,19 @@ class Containers(Resource):
         def set_config(container, config_item, config_value):
             if container.set_config_item(config_item, config_value):
                 container.save_config()
+
+                # python-lxc workaround (issue #1415 on lxc/lxc)
+                f = open(container.config_file_name, "r")
+                lines = f.readlines()
+                f.close()
+                f = open(container.config_file_name, "w")
+                for line in lines:
+                    if not line.endswith(' = \n'):
+                        f.write(line)
+                f.close()
             else:
-                return 500
+                api.abort(
+                    code=500, message='Error while setting container\'s parameter')
 
         # Get data from ContainersList.post()
         # or
@@ -481,220 +506,252 @@ class Containers(Resource):
         c = lxc.Container(container.name)
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
-            if 'name' in data:
-                if data['name'] != c.name:
-                    if c.rename(data['name']):
-                        c = lxc.Container(data['name'])
+            if 'name' in data['attributes']:
+                if data['attributes']['name'] != c.name:
+                    if c.rename(data['attributes']['name']):
+                        c = lxc.Container(data['attributes']['name'])
                     else:
-                        return 500
+                        api.abort(
+                            code=500, message='Error while instantiate container')
 
-            if 'lxc' in data:
-                if 'aa_allow_incomplete' in data['lxc']:
-                    set_config(c, 'lxc.aa_allow_incomplete', data[
+            if 'lxc' in data['attributes']:
+                if 'aa_allow_incomplete' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.aa_allow_incomplete', data['attributes'][
                                'lxc']['aa_allow_incomplete'])
-                if 'aa_profile' in data['lxc']:
-                    set_config(c, 'lxc.aa_profile', data['lxc']['aa_profile'])
-                if 'arch' in data['lxc']:
-                    set_config(c, 'lxc.arch', data['lxc']['arch'])
-                if 'autodev' in data['lxc']:
-                    set_config(c, 'lxc.autodev', data['lxc']['autodev'])
-                if 'cap' in data['lxc']:
-                    if 'drop' in data['lxc']['cap']:
-                        set_config(c, 'lxc.cap.drop', data['lxc']['cap']['drop'])
-                    if 'keep' in data['lxc']['cap']:
-                        set_config(c, 'lxc.cap.keep', data['lxc']['cap']['keep'])
-                if 'cgroup' in data['lxc']:
-                    if 'memory' in data['lxc']['cgroup']:
-                        if 'limit_in_bytes' in data['lxc']['cgroup']['memory']:
-                            set_config(c, 'lxc.cgroup.memory.limit_in_bytes', data[
+                if 'aa_profile' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.aa_profile', data[
+                               'attributes']['lxc']['aa_profile'])
+                if 'arch' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.arch', data[
+                               'attributes']['lxc']['arch'])
+                if 'autodev' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.autodev', data[
+                               'attributes']['lxc']['autodev'])
+                if 'cap' in data['attributes']['lxc']:
+                    if 'drop' in data['attributes']['lxc']['cap']:
+                        set_config(c, 'lxc.cap.drop', data['attributes'][
+                                   'lxc']['cap']['drop'])
+                    if 'keep' in data['attributes']['lxc']['cap']:
+                        set_config(c, 'lxc.cap.keep', data['attributes'][
+                                   'lxc']['cap']['keep'])
+                if 'cgroup' in data['attributes']['lxc']:
+                    if 'memory' in data['attributes']['lxc']['cgroup']:
+                        if 'limit_in_bytes' in data['attributes']['lxc']['cgroup']['memory']:
+                            set_config(c, 'lxc.cgroup.memory.limit_in_bytes', data['attributes'][
                                        'lxc']['cgroup']['memory']['limit_in_bytes'])
-                        if 'memsw' in data['lxc']['cgroup']['memory']:
-                            if 'limit_in_bytes' in data['lxc']['cgroup']['memory']['memsw']:
-                                set_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes', data[
+                        if 'memsw' in data['attributes']['lxc']['cgroup']['memory']:
+                            if 'limit_in_bytes' in data['attributes']['lxc']['cgroup']['memory']['memsw']:
+                                set_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes', data['attributes'][
                                            'lxc']['cgroup']['memory']['memsw']['limit_in_bytes'])
-                    if 'cpu' in data['lxc']['cgroup']:
-                        if 'shares' in data['lxc']['cgroup']['cpu']:
-                            set_config(c, 'lxc.cgroup.cpu.shares', data[
+                    if 'cpu' in data['attributes']['lxc']['cgroup']:
+                        if 'shares' in data['attributes']['lxc']['cgroup']['cpu']:
+                            set_config(c, 'lxc.cgroup.cpu.shares', data['attributes'][
                                        'lxc']['cgroup']['cpu']['shares'])
-                    if 'cpuset' in data['lxc']['cgroup']:
-                        if 'cpus' in data['lxc']['cgroup']['cpuset']:
-                            set_config(c, 'lxc.cgroup.cpuset.cpus', data[
+                    if 'cpuset' in data['attributes']['lxc']['cgroup']:
+                        if 'cpus' in data['attributes']['lxc']['cgroup']['cpuset']:
+                            set_config(c, 'lxc.cgroup.cpuset.cpus', data['attributes'][
                                        'lxc']['cgroup']['cpuset']['cpus'])
-                if 'console' in data['lxc']:
-                    if '_' in data['lxc']['console']:
-                        set_config(c, 'lxc.console', data['lxc']['console']['_'])
-                    if 'logfile' in data['lxc']['console']:
-                        set_config(c, 'lxc.console.logfile', data[
+                if 'console' in data['attributes']['lxc']:
+                    if '_' in data['attributes']['lxc']['console']:
+                        set_config(c, 'lxc.console', data['attributes'][
+                                   'lxc']['console']['_'])
+                    if 'logfile' in data['attributes']['lxc']['console']:
+                        set_config(c, 'lxc.console.logfile', data['attributes'][
                                    'lxc']['console']['logfile'])
-                if 'devttydir' in data['lxc']:
-                    set_config(c, 'lxc.devttydir', data['lxc']['devttydir'])
-                if 'environment' in data['lxc']:
-                    set_config(c, 'lxc.environment', data['lxc']['environment'])
-                if 'ephemeral' in data['lxc']:
-                    set_config(c, 'lxc.ephemeral', data['lxc']['ephemeral'])
-                if 'group' in data['lxc']:
-                    set_config(c, 'lxc.group', data['lxc']['group'])
-                if 'haltsignal' in data['lxc']:
-                    set_config(c, 'lxc.haltsignal', data['lxc']['haltsignal'])
-                if 'hook' in data['lxc']:
-                    if 'autodev' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.autodev', data[
+                if 'devttydir' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.devttydir', data[
+                               'attributes']['lxc']['devttydir'])
+                if 'environment' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.environment', data['attributes'][
+                               'lxc']['environment'])
+                if 'ephemeral' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.ephemeral', data[
+                               'attributes']['lxc']['ephemeral'])
+                if 'group' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.group', data[
+                               'attributes']['lxc']['group'])
+                if 'haltsignal' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.haltsignal', data[
+                               'attributes']['lxc']['haltsignal'])
+                if 'hook' in data['attributes']['lxc']:
+                    if 'autodev' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.autodev', data['attributes'][
                                    'lxc']['hook']['autodev'])
-                    if 'clone' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.clone', data[
+                    if 'clone' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.clone', data['attributes'][
                                    'lxc']['hook']['clone'])
-                    if 'destroy' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.destroy', data[
+                    if 'destroy' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.destroy', data['attributes'][
                                    'lxc']['hook']['destroy'])
-                    if 'mount' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.mount', data[
+                    if 'mount' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.mount', data['attributes'][
                                    'lxc']['hook']['mount'])
-                    if 'post-stop' in data['lxc']['hook']:
+                    if 'post-stop' in data['attributes']['lxc']['hook']:
                         set_config(c, 'lxc.hook.post-stop',
-                                   data['lxc']['hook']['post-stop'])
-                    if 'pre-mount' in data['lxc']['hook']:
+                                   data['attributes']['lxc']['hook']['post-stop'])
+                    if 'pre-mount' in data['attributes']['lxc']['hook']:
                         set_config(c, 'lxc.hook.pre-mount',
-                                   data['lxc']['hook']['pre-mount'])
-                    if 'pre-start' in data['lxc']['hook']:
+                                   data['attributes']['lxc']['hook']['pre-mount'])
+                    if 'pre-start' in data['attributes']['lxc']['hook']:
                         set_config(c, 'lxc.hook.pre-start',
-                                   data['lxc']['hook']['pre-start'])
-                    if 'start' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.start', data[
+                                   data['attributes']['lxc']['hook']['pre-start'])
+                    if 'start' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.start', data['attributes'][
                                    'lxc']['hook']['start'])
-                    if 'stop' in data['lxc']['hook']:
-                        set_config(c, 'lxc.hook.stop', data['lxc']['hook']['stop'])
-                if 'id_map' in data['lxc']:
-                    set_config(c, 'lxc.id_map', data['lxc']['id_map'])
-                if 'include' in data['lxc']:
-                    set_config(c, 'lxc.include', data['lxc']['include'])
-                if 'init_cmd' in data['lxc']:
-                    set_config(c, 'lxc.init_cmd', data['lxc']['init_cmd'])
-                if 'init_gid' in data['lxc']:
-                    set_config(c, 'lxc.init_gid', data['lxc']['init_gid'])
-                if 'init_uid' in data['lxc']:
-                    set_config(c, 'lxc.init_uid', data['lxc']['init_uid'])
-                if 'kmsg' in data['lxc']:
-                    set_config(c, 'lxc.kmsg', data['lxc']['kmsg'])
-                if 'logfile' in data['lxc']:
-                    set_config(c, 'lxc.logfile', data['lxc']['logfile'])
-                if 'loglevel' in data['lxc']:
-                    set_config(c, 'lxc.loglevel', data['lxc']['loglevel'])
-                if 'monitor' in data['lxc']:
-                    if 'unshare' in data['lxc']['monitor']:
-                        set_config(c, 'lxc.monitor.unshare', data[
+                    if 'stop' in data['attributes']['lxc']['hook']:
+                        set_config(c, 'lxc.hook.stop', data['attributes'][
+                                   'lxc']['hook']['stop'])
+                if 'id_map' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.id_map', data[
+                               'attributes']['lxc']['id_map'])
+                if 'include' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.include', data[
+                               'attributes']['lxc']['include'])
+                if 'init_cmd' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.init_cmd', data[
+                               'attributes']['lxc']['init_cmd'])
+                if 'init_gid' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.init_gid', data[
+                               'attributes']['lxc']['init_gid'])
+                if 'init_uid' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.init_uid', data[
+                               'attributes']['lxc']['init_uid'])
+                if 'kmsg' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.kmsg', data[
+                               'attributes']['lxc']['kmsg'])
+                if 'logfile' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.logfile', data[
+                               'attributes']['lxc']['logfile'])
+                if 'loglevel' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.loglevel', data[
+                               'attributes']['lxc']['loglevel'])
+                if 'monitor' in data['attributes']['lxc']:
+                    if 'unshare' in data['attributes']['lxc']['monitor']:
+                        set_config(c, 'lxc.monitor.unshare', data['attributes'][
                                    'lxc']['monitor']['unshare'])
-                if 'mount' in data['lxc']:
-                    if '_' in data['lxc']['mount']:
-                        set_config(c, 'lxc.mount', data['lxc']['mount']['_'])
-                    if 'auto' in data['lxc']['mount']:
-                        set_config(c, 'lxc.mount.auto', data[
+                if 'mount' in data['attributes']['lxc']:
+                    if '_' in data['attributes']['lxc']['mount']:
+                        set_config(c, 'lxc.mount', data[
+                                   'attributes']['lxc']['mount']['_'])
+                    if 'auto' in data['attributes']['lxc']['mount']:
+                        set_config(c, 'lxc.mount.auto', data['attributes'][
                                    'lxc']['mount']['auto'])
-                    if 'entry' in data['lxc']['mount']:
-                        set_config(c, 'lxc.mount.entry', data[
+                    if 'entry' in data['attributes']['lxc']['mount']:
+                        set_config(c, 'lxc.mount.entry', data['attributes'][
                                    'lxc']['mount']['entry'])
-                if 'network' in data['lxc']:
-                    for i in range(len(data['lxc']['network'])):
-                        if 'type' in data['lxc']['network']:
+                if 'network' in data['attributes']['lxc']:
+                    for i in range(len(data['attributes']['lxc']['network'])):
+                        if 'type' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.type' %
-                                       i, data['lxc']['network']['type'])
-                        if 'veth' in data['lxc']['network']:
-                            if 'pair' in data['lxc']['network']['veth']:
+                                       i, data['attributes']['lxc']['network'][i]['type'])
+                        if 'veth' in data['attributes']['lxc']['network'][i]:
+                            if 'pair' in data['attributes']['lxc']['network'][i]['veth']:
                                 set_config(c, 'lxc.network.%s.veth.pair' %
-                                           i, data['lxc']['network']['veth']['pair'])
-                        if 'vlan' in data['lxc']['network']:
-                            if 'id' in data['lxc']['network']['vlan']:
+                                           i, data['attributes']['lxc']['network'][i]['veth']['pair'])
+                        if 'vlan' in data['attributes']['lxc']['network'][i]:
+                            if 'id' in data['attributes']['lxc']['network'][i]['vlan']:
                                 set_config(c, 'lxc.network.%s.vlan.id' %
-                                           i, data['lxc']['network']['vlan']['id'])
-                        if 'macvlan' in data['lxc']['network']:
-                            if 'mode' in data['lxc']['network']['macvlan']:
-                                set_config(c, 'lxc.network.%s.macvlan.mode' % i, data[
-                                           'lxc']['network']['macvlan']['mode'])
-                        if 'flags' in data['lxc']['network']:
+                                           i, data['attributes']['lxc']['network'][i]['vlan']['id'])
+                        if 'macvlan' in data['attributes']['lxc']['network'][i]:
+                            if 'mode' in data['attributes']['lxc']['network'][i]['macvlan']:
+                                set_config(c, 'lxc.network.%s.macvlan.mode' % i, data['attributes'][
+                                           'lxc']['network'][i]['macvlan']['mode'])
+                        if 'flags' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.flags' %
-                                       i, data['lxc']['network']['flags'])
-                        if 'link' in data['lxc']['network']:
+                                       i, data['attributes']['lxc']['network'][i]['flags'])
+                        if 'link' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.link' %
-                                       i, data['lxc']['network']['link'])
-                        if 'mtu' in data['lxc']['network']:
+                                       i, data['attributes']['lxc']['network'][i]['link'])
+                        if 'mtu' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.mtu' %
-                                       i, data['lxc']['network']['mtu'])
-                        if 'name' in data['lxc']['network']:
+                                       i, data['attributes']['lxc']['network'][i]['mtu'])
+                        if 'name' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.name' %
-                                       i, data['lxc']['network']['name'])
-                        if 'hwaddr' in data['lxc']['network']:
+                                       i, data['attributes']['lxc']['network'][i]['name'])
+                        if 'hwaddr' in data['attributes']['lxc']['network'][i]:
                             set_config(c, 'lxc.network.%s.hwaddr' %
-                                       i, data['lxc']['network']['hwaddr'])
-                        if 'ipv4' in data['lxc']['network']:
-                            if '_' in data['lxc']['network']['ipv4']:
+                                       i, data['attributes']['lxc']['network'][i]['hwaddr'])
+                        if 'ipv4' in data['attributes']['lxc']['network'][i]:
+                            if '_' in data['attributes']['lxc']['network'][i]['ipv4']:
+                                print(data['attributes']['lxc'][
+                                      'network'][i]['ipv4']['_'])
                                 set_config(c, 'lxc.network.%s.ipv4' %
-                                           i, data['lxc']['network']['ipv4']['_'])
-                            if 'gateway' in data['lxc']['network']['ipv4']:
-                                set_config(c, 'lxc.network.%s.ipv4.gateway' % i, data[
-                                           'lxc']['network']['ipv4']['gateway'])
-                        if 'ipv6' in data['lxc']['network']:
-                            if '_' in data['lxc']['network']['ipv6']:
+                                           i, data['attributes']['lxc']['network'][i]['ipv4']['_'])
+
+                            if 'gateway' in data['attributes']['lxc']['network'][i]['ipv4']:
+                                set_config(c, 'lxc.network.%s.ipv4.gateway' % i, data['attributes'][
+                                           'lxc']['network'][i]['ipv4']['gateway'])
+                        if 'ipv6' in data['attributes']['lxc']['network'][i]:
+                            if '_' in data['attributes']['lxc']['network'][i]['ipv6']:
                                 set_config(c, 'lxc.network.%s.ipv6' %
-                                           i, data['lxc']['network']['ipv6']['_'])
-                            if 'gateway' in data['lxc']['network']['ipv6']:
-                                set_config(c, 'lxc.network.%s.ipv6.gateway' % i, data[
-                                           'lxc']['network']['ipv6']['gateway'])
-                        if 'script' in data['lxc']['network']:
-                            if 'up' in data['lxc']['network']['script']:
+                                           i, data['attributes']['lxc']['network'][i]['ipv6']['_'])
+                            if 'gateway' in data['attributes']['lxc']['network'][i]['ipv6']:
+                                set_config(c, 'lxc.network.%s.ipv6.gateway' % i, data['attributes'][
+                                           'lxc']['network'][i]['ipv6']['gateway'])
+                        if 'script' in data['attributes']['lxc']['network'][i]:
+                            if 'up' in data['attributes']['lxc']['network'][i]['script']:
                                 set_config(c, 'lxc.network.%s.script.up' %
-                                           i, data['lxc']['network']['script']['up'])
-                            if 'down' in data['lxc']['network']['script']:
-                                set_config(c, 'lxc.network.%s.script.down' % i, data[
-                                           'lxc']['network']['script']['down'])
-                if 'no_new_privs' in data['lxc']:
-                    set_config(c, 'lxc.no_new_privs', data['lxc']['no_new_privs'])
-                if 'pts' in data['lxc']:
-                    set_config(c, 'lxc.pts', data['lxc']['pts'])
-                if 'rebootsignal' in data['lxc']:
-                    set_config(c, 'lxc.rebootsignal', data['lxc']['rebootsignal'])
-                if 'rootfs' in data['lxc']:
-                    if '_' in data['lxc']['rootfs']:
-                        set_config(c, 'lxc.rootfs', data['lxc']['rootfs']['_'])
-                    if 'mount' in data['lxc']['rootfs']:
-                        set_config(c, 'lxc.rootfs.mount', data[
+                                           i, data['attributes']['lxc']['network'][i]['script']['up'])
+                            if 'down' in data['attributes']['lxc']['network'][i]['script']:
+                                set_config(c, 'lxc.network.%s.script.down' % i, data['attributes'][
+                                           'lxc']['network'][i]['script']['down'])
+                if 'no_new_privs' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.no_new_privs', data['attributes'][
+                               'lxc']['no_new_privs'])
+                if 'pts' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.pts', data['attributes']['lxc']['pts'])
+                if 'rebootsignal' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.rebootsignal', data['attributes'][
+                               'lxc']['rebootsignal'])
+                if 'rootfs' in data['attributes']['lxc']:
+                    if '_' in data['attributes']['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs', data[
+                                   'attributes']['lxc']['rootfs']['_'])
+                    if 'mount' in data['attributes']['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.mount', data['attributes'][
                                    'lxc']['rootfs']['mount'])
-                    if 'options' in data['lxc']['rootfs']:
-                        set_config(c, 'lxc.rootfs.options', data[
+                    if 'options' in data['attributes']['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.options', data['attributes'][
                                    'lxc']['rootfs']['options'])
-                    if 'backend' in data['lxc']['rootfs']:
-                        set_config(c, 'lxc.rootfs.backend', data[
+                    if 'backend' in data['attributes']['lxc']['rootfs']:
+                        set_config(c, 'lxc.rootfs.backend', data['attributes'][
                                    'lxc']['rootfs']['backend'])
-                if 'se_context' in data['lxc']:
-                    set_config(c, 'lxc.se_context', data['lxc']['se_context'])
-                if 'seccomp' in data['lxc']:
-                    set_config(c, 'lxc.seccomp', data['lxc']['seccomp'])
-                if 'start' in data['lxc']:
-                    if 'auto' in data['lxc']['start']:
-                        set_config(c, 'lxc.start.auto', data[
+                if 'se_context' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.se_context', data[
+                               'attributes']['lxc']['se_context'])
+                if 'seccomp' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.seccomp', data[
+                               'attributes']['lxc']['seccomp'])
+                if 'start' in data['attributes']['lxc']:
+                    if 'auto' in data['attributes']['lxc']['start']:
+                        set_config(c, 'lxc.start.auto', data['attributes'][
                                    'lxc']['start']['auto'])
-                    if 'delay' in data['lxc']['start']:
-                        set_config(c, 'lxc.start.delay', data[
+                    if 'delay' in data['attributes']['lxc']['start']:
+                        set_config(c, 'lxc.start.delay', data['attributes'][
                                    'lxc']['start']['delay'])
-                    if 'order' in data['lxc']['start']:
-                        set_config(c, 'lxc.start.order', data[
+                    if 'order' in data['attributes']['lxc']['start']:
+                        set_config(c, 'lxc.start.order', data['attributes'][
                                    'lxc']['start']['order'])
-                if 'stopsignal' in data['lxc']:
-                    set_config(c, 'lxc.stopsignal', data['lxc']['stopsignal'])
-                if 'syslog' in data['lxc']:
-                    set_config(c, 'lxc.syslog', data['lxc']['syslog'])
-                if 'tty' in data['lxc']:
-                    set_config(c, 'lxc.tty', data['lxc']['tty'])
-                if 'utsname' in data['lxc']:
-                    set_config(c, 'lxc.utsname', data['lxc']['utsname'])
+                if 'stopsignal' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.stopsignal', data[
+                               'attributes']['lxc']['stopsignal'])
+                if 'syslog' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.syslog', data[
+                               'attributes']['lxc']['syslog'])
+                if 'tty' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.tty', data['attributes']['lxc']['tty'])
+                if 'utsname' in data['attributes']['lxc']:
+                    set_config(c, 'lxc.utsname', data[
+                               'attributes']['lxc']['utsname'])
 
             return Containers.get(self, container.id)
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
     @user_has('ct_delete')
     @api.doc(responses={
-        200: 'Container destroyed',
+        204: 'Container destroyed',
         404: 'Container doesn\'t exists',
         409: 'Can\'t destroy and/or stop container',
-        500: 'Can\'t create container'
     })
     def delete(self, id):
         """
@@ -706,11 +763,13 @@ class Containers(Resource):
         if c.defined and (id in current_identity.containers or current_identity.admin):
             if c.running:
                 if not c.stop():
-                    return 409
+                    api.abort(
+                        code=409, message='Can\'t destroy and/or stop container')
             if not c.destroy():
-                return 409
-            return 200
-        return 404
+                api.abort(
+                    code=409, message='Can\'t destroy and/or stop container')
+            return {}, 204
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersStart(Resource):
@@ -726,10 +785,12 @@ class ContainersStart(Resource):
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
             c.start()
-            c.wait('RUNNING', 3)
-            return 200
+            if c.wait('RUNNING', 30):
+                return {}, 204
+            else:
+                api.abort(code=500, message='Start timed out')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersFreeze(Resource):
@@ -745,10 +806,12 @@ class ContainersFreeze(Resource):
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
             c.freeze()
-            c.wait('FROZEN', 3)
-            return 200
+            if c.wait('FROZEN', 30):
+                return {}, 204
+            else:
+                api.abort(code=500, message='Freeze timed out')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersUnfreeze(Resource):
@@ -764,10 +827,12 @@ class ContainersUnfreeze(Resource):
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
             c.unfreeze()
-            c.wait('RUNNING', 3)
-            return 200
+            if c.wait('RUNNING', 30):
+                return {}, 204
+            else:
+                api.abort(code=500, message='Unfreeze timed out')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersStop(Resource):
@@ -783,10 +848,12 @@ class ContainersStop(Resource):
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
             c.stop()
-            c.wait('STOPPED', 3)
-            return 200
+            if c.wait('STOPPED', 30):
+                return {}, 204
+            else:
+                api.abort(code=500, message='Stop timed out')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersShutdown(Resource):
@@ -802,10 +869,12 @@ class ContainersShutdown(Resource):
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
             c.shutdown(10)
-            c.wait('STOPPED', 3)
-            return 200
+            if c.wait('STOPPED', 30):
+                return {}, 204
+            else:
+                api.abort(code=500, message='Shutdown timed out')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersRestart(Resource):
@@ -820,11 +889,13 @@ class ContainersRestart(Resource):
         c = lxc.Container(container.name)
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
-            ContainersStop.post(self, id)
-            ContainersStart.post(self, id)
-            return 200
+            try:
+                if ContainersStop.post(self, id)[1] == 204 and ContainersStart.post(self, id)[1] == 204:
+                    return {}, 204
+            except KeyError:
+                api.abort(code=500, message='Unknown error')
 
-        return 404
+        api.abort(code=404, message='Container doesn\'t exists')
 
 
 class LxcCheckConfig(Resource):
@@ -914,6 +985,7 @@ class HostStats(Resource):
     decorators = [jwt_required()]
 
     @user_has('host_stats')
+    @api.marshal_with(host_stats_get, envelope='data')
     def get(self):
         """
         Get host stats (uptime, cpu, ram, etc)
@@ -922,18 +994,19 @@ class HostStats(Resource):
         os_str = ' '.join(os)
         host_cpu_infos = lwp.host_cpu_infos()
 
-        return {'data': dict(
-            uptime=lwp.host_uptime(),
-            hostname=socket.gethostname(),
-            dist=os_str,
-            disk=lwp.host_disk_usage(),
-            cpu=dict(
-                usage=lwp.host_cpu_percent(),
-                model=host_cpu_infos['name'],
-                cores=host_cpu_infos['cores']
-            ),
-            memory=lwp.host_memory_usage(),
-            kernel=lwp.host_kernel_verion())}
+        return {
+            'uptime': lwp.host_uptime(),
+            'hostname': socket.gethostname(),
+            'dist': os_str,
+            'disk': lwp.host_disk_usage(),
+            'cpu': {
+                'usage': lwp.host_cpu_percent(),
+                'model': host_cpu_infos['name'],
+                'cores': host_cpu_infos['cores']
+            },
+            'memory': lwp.host_memory_usage(),
+            'kernel': lwp.host_kernel_verion()
+        }
 
 
 host_reboot_parser = api.parser()
@@ -958,12 +1031,15 @@ class HostReboot(Resource):
 
         msg = '*** LXC Web Panel *** \
                 \n%s' % message
+
         try:
             # DEBUG
             subprocess.check_call('echo \'%s\' | wall' % msg, shell=True)
 
             # subprocess.check_call('/sbin/shutdown -r now \'%s\'' % msg, shell=True)
-            return dict(status='success',
-                        message=message)
+            return {
+                'status': 'success',
+                'message': message
+            }
         except:
-            return dict(status='error'), 500
+            api.abort(code=500, message='Error during system call')

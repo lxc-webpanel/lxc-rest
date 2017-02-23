@@ -5,11 +5,13 @@ from app.exceptions import *
 from passlib.apps import custom_app_context as pwd_context
 from sqlalchemy.ext.associationproxy import association_proxy
 
+
 def _user_find(u):
     user = User.query.get(u)
     if not(user):
         raise UserDoesntExist(u)
     return user
+
 
 def _group_find(g):
     group = Group.query.get(g)
@@ -85,7 +87,7 @@ class User(db.Model):
     password = db.Column(db.String(100))
     _groups = db.relationship(
         'Group',
-        secondary=user_group_table,
+        secondary=user_group_table
     )
     groups = association_proxy(
         '_groups',
@@ -142,6 +144,31 @@ class User(db.Model):
         self.containers = [
             container for container in self.containers if container not in containers]
 
+    def __jsonapi__(self, group=None):
+        _json = {
+            'type': 'users',
+            'id': self.id,
+            'attributes': {
+                'admin': self.admin,
+                'name': self.name,
+                'username': self.username,
+                'email': self.email
+            }
+        }
+
+        if group == 'flat':
+            return _json
+
+        _json['relationships'] = {}
+        _json['relationships']['groups'] = {}
+        _json['relationships']['containers'] = {}
+
+        _json['relationships']['groups']['data'] = [
+            group.__jsonapi__('flat') for group in self._groups]
+        _json['relationships']['containers']['data'] = [
+            container.__jsonapi__('flat') for container in self._containers]
+
+        return _json
 
     def __repr__(self):
         return '<User %r>' % self.id
@@ -170,7 +197,6 @@ class Group(db.Model):
         creator=_user_find
     )
 
-
     def __init__(
         self,
         name=None,
@@ -189,6 +215,29 @@ class Group(db.Model):
             self.users = [user for user in users]
         elif users and isinstance(users, int):
             self.users = [users]
+
+    def __jsonapi__(self, group=None):
+        _json = {
+            'type': 'groups',
+            'id': self.id,
+            'attributes': {
+                'name': self.name,
+            }
+        }
+
+        if group == 'flat':
+            return _json
+
+        _json['relationships'] = {}
+        _json['relationships']['abilities'] = {}
+        _json['relationships']['users'] = {}
+
+        _json['relationships']['abilities']['data'] = [
+            ability.__jsonapi__('flat') for ability in self._abilities]
+        _json['relationships']['users']['data'] = [
+            user.__jsonapi__('flat') for user in self._users]
+
+        return _json
 
     def __repr__(self):
         return '<Group %r>' % self.id
@@ -221,6 +270,26 @@ class Ability(db.Model):
         elif groups and isinstance(groups, int):
             self.groups = [groups]
 
+    def __jsonapi__(self, group=None):
+        _json = {
+            'type': 'abilities',
+            'id': self.id,
+            'attributes': {
+                'name': self.name
+            }
+        }
+
+        if group == 'flat':
+            return _json
+
+        _json['relationships'] = {}
+        _json['relationships']['groups'] = {}
+
+        _json['relationships']['groups']['data'] = [
+            group.__jsonapi__('flat') for group in self._groups]
+
+        return _json
+
     def __repr__(self):
         return '<Ability %r>' % self.id
 
@@ -251,6 +320,26 @@ class Container(db.Model):
             self.users = [user for user in users]
         elif users and isinstance(users, int):
             self.users = [users]
+
+    def __jsonapi__(self, group=None):
+        _json = {
+            'type': 'containers',
+            'id': self.id,
+            'attributes': {
+                'name': self.name
+            }
+        }
+
+        if group == 'flat':
+            return _json
+
+        _json['relationships'] = {}
+        _json['relationships']['users'] = {}
+
+        _json['relationships']['users']['data'] = [
+            user.__jsonapi__('flat') for user in self._users]
+
+        return _json
 
     def __repr__(self):
         return '<Container %r>' % self.id

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import flask
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_restplus import Api
 from flask_jwt import JWT, JWTError
 from flask_cors import CORS
 from werkzeug.contrib.profiler import ProfilerMiddleware
+from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__, instance_relative_config=True,
             template_folder='../templates')
@@ -48,12 +50,39 @@ class ExceptionAwareApi(Api):
     def handle_error(self, e):
         if isinstance(e, JWTError):
             code = 401
-            data = {'status_code': code,
-                    'message': "Authorization Required. Request does not contain an access token"}
+            data = {
+                'errors': [{
+                    'details': 'Authorization Required. Request does not contain an access token',
+                    'status': str(code),
+                    'title': 'Unauthorized'
+                }]
+            }
         else:
             # Did not match a custom exception, continue normally
             return super(ExceptionAwareApi, self).handle_error(e)
         return self.make_response(data, code)
+
+    def abort(self, code=500, message=None, **kwargs):
+        '''
+        Properly abort the current request.
+        Raise a `HTTPException` for the given status `code`.
+        Attach any keyword arguments to the exception for later processing.
+        :param int code: The associated HTTP status code
+        :param str message: An optional details message
+        :param kwargs: Any additional data to pass to the error payload
+        :raise HTTPException:
+        '''
+        try:
+            flask.abort(code)
+        except HTTPException as e:
+            # JSON API specs
+            kwargs['errors'] = []
+            kwargs['errors'].append({})
+            kwargs['errors'][0]['detail'] = message
+            kwargs['errors'][0]['status'] = str(code)
+            kwargs['errors'][0]['title'] = str(e).split(':')[1].lstrip(' ')
+            e.data = kwargs
+            raise
 
 
 cors = CORS(app, resources={r'/*': {'origins': app.config['ALLOW_ORIGIN']}})
