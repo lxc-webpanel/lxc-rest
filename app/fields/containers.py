@@ -130,22 +130,6 @@ containers_fields_attributes_post = api.model('ContainersFieldsAttributesPost', 
     'lxc': fields.Nested(lxc_container_conf)
 })
 
-containers_fields = api.model('ContainersFields', {
-    'type': fields.String(pattern='containers'),
-    'id': fields.Integer,
-    'attributes': fields.Nested(containers_fields_attributes),
-})
-
-from .users import *
-
-containers_fields_with_relationships = api.model('ContainersFieldsWithRelationships', {
-    'relationships': fields.Nested(api.model('ContainersRelationships', {
-        'users': fields.Nested(api.model('ContainersData', {
-            'data': fields.Nested(api.models['UsersFields'], as_list=True)
-        }))
-    }))
-})
-
 containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithRelationshipsPost', {
     'relationships': fields.Nested(api.model('ContainersRelationshipsPost', {
         'users': fields.Nested(api.model('ContainersDataPost', {
@@ -157,7 +141,7 @@ containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithR
     }))
 })
 
-containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships, {
+containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(containers_fields_attributes),

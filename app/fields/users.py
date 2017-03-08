@@ -19,26 +19,6 @@ users_fields_attributes_post = api.model('UsersFieldsAttributesPost', {
     'password': fields.String(required=True, pattern='^(?!\s*$).+')
 })
 
-users_fields = api.model('UsersFields', {
-    'type': fields.String(pattern='users'),
-    'id': fields.Integer,
-    'attributes': fields.Nested(users_fields_attributes),
-})
-
-from .groups import *
-from .containers import *
-
-users_fields_with_relationships = api.model('UsersFieldsWithRelationships', {
-    'relationships': fields.Nested(api.model('UsersRelationships', {
-        'groups': fields.Nested(api.model('GroupsData', {
-            'data': fields.Nested(api.models['GroupsFields'], as_list=True)
-        })),
-        'containers': fields.Nested(api.model('ContainersData', {
-            'data': fields.Nested(api.models['ContainersFields'], as_list=True)
-        }))
-    }))
-})
-
 users_fields_with_relationships_post_put = api.model('UsersFieldsWithRelationshipsPost', {
     'relationships': fields.Nested(api.model('UsersRelationshipsPost', {
         'groups': fields.Nested(api.model('GroupsDataPost', {
@@ -56,7 +36,7 @@ users_fields_with_relationships_post_put = api.model('UsersFieldsWithRelationshi
     }))
 })
 
-users_fields_get = api.inherit('UsersFieldsGet', users_fields_with_relationships, {
+users_fields_get = api.inherit('UsersFieldsGet', users_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(users_fields_attributes),

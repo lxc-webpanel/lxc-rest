@@ -20,6 +20,7 @@ import re
 import gzip
 import socket
 import subprocess
+import psutil
 
 
 class UsersList(Resource):
@@ -985,29 +986,88 @@ class HostStats(Resource):
     decorators = [jwt_required()]
 
     @user_has('host_stats')
-    @api.marshal_with(host_stats_get, envelope='data')
-    def get(self):
+    @api.marshal_with(host_stats_fields_get, envelope='data')
+    def get(self, container=False):
         """
         Get host stats (uptime, cpu, ram, etc)
         """
-        os = platform.dist()
-        os_str = ' '.join(os)
+
         host_cpu_infos = lwp.host_cpu_infos()
 
-        return {
+        cpu_count_logical = psutil.cpu_count()
+        cpu_count_physical = psutil.cpu_count(logical=False)
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+
+        virtual_memory = psutil.virtual_memory()
+        swap_memory = psutil.swap_memory()
+
+        disk_partitions = psutil.disk_partitions()
+        disk_partitions_usage = []
+        for partition in disk_partitions:
+            partition_data = psutil.disk_usage(partition.mountpoint)
+            disk_partitions_usage.append({
+                'name': partition.mountpoint,
+                'total': partition_data.total,
+                'used': partition_data.used,
+                'free': partition_data.free,
+                'percent': partition_data.percent
+            })
+
+        net_if_addrs = psutil.net_if_addrs()
+
+        adapters = []
+
+        for adapter in net_if_addrs:
+            adapters.append({
+                'name': adapter,
+                'ipv4': None,
+                'ipv6': None
+            })
+            index = len(adapters) - 1
+            for snic in net_if_addrs[adapter]:
+                if snic.family.name == 'AF_INET':
+                    adapters[index]['ipv4'] = snic.address
+                if snic.family.name == 'AF_INET6':
+                    adapters[index]['ipv6'] = snic.address
+
+        json_output = {
             'uptime': lwp.host_uptime(),
             'hostname': socket.gethostname(),
-            'dist': os_str,
-            'disk': lwp.host_disk_usage(),
+            'distrib': ' '.join(platform.dist()),
+            'disk': disk_partitions_usage,
             'cpu': {
-                'usage': lwp.host_cpu_percent(),
+                'usage': cpu_percent,
                 'model': host_cpu_infos['name'],
-                'cores': host_cpu_infos['cores']
+                'physical': cpu_count_physical,
+                'logical': cpu_count_logical
             },
-            'memory': lwp.host_memory_usage(),
-            'kernel': lwp.host_kernel_verion()
+            'memory': {
+                'virtual': {
+                    'total': virtual_memory.total,
+                    'used': virtual_memory.used,
+                    'free': virtual_memory.free,
+                    'percent': virtual_memory.percent
+                },
+                'swap': {
+                    'total': swap_memory.total,
+                    'used': swap_memory.used,
+                    'free': swap_memory.free,
+                    'percent': swap_memory.percent
+                }
+            },
+            'adapters': adapters,
+            'kernel': platform.release()
         }
 
+        if not container:
+            output = {
+                'type': 'stats',
+                'attributes': json_output
+            }
+        else:
+            output = json_output
+
+        return output
 
 host_reboot_parser = api.parser()
 host_reboot_parser.add_argument('message', type=str, location='json')

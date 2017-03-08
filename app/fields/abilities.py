@@ -8,22 +8,6 @@ abilities_fields_attributes = api.model('AbilitiesFieldsAttributes', {
     'name': fields.String
 })
 
-abilities_fields = api.model('AbilitiesFields', {
-    'type': fields.String,
-    'id': fields.Integer,
-    'attributes': fields.Nested(abilities_fields_attributes),
-})
-
-from .groups import *
-
-abilities_fields_with_relationships = api.model('AbilitiesFieldsWithRelationships', {
-    'relationships': fields.Nested(api.model('AbilitiesRelationships', {
-        'groups': fields.Nested(api.model('AbilitiesData', {
-            'data': fields.Nested(api.models['GroupsFields'], as_list=True)
-        }))
-    }))
-})
-
 abilities_fields_with_relationships_put = api.model('AbilitiesFieldsWithRelationshipsPost', {
     'relationships': fields.Nested(api.model('AbilitiesRelationshipsPost', {
         'groups': fields.Nested(api.model('AbilitiesDataPost', {
@@ -35,7 +19,7 @@ abilities_fields_with_relationships_put = api.model('AbilitiesFieldsWithRelation
     }))
 })
 
-abilities_fields_get = api.inherit('AbilitiesFieldsGet', abilities_fields_with_relationships, {
+abilities_fields_get = api.inherit('AbilitiesFieldsGet', abilities_fields_with_relationships_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(abilities_fields_attributes),

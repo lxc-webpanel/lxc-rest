@@ -12,26 +12,6 @@ groups_fields_attributes_post = api.model('GroupsFieldsAttributesPost', {
     'name': fields.String(required=True, pattern='^(?!\s*$).+')
 })
 
-groups_fields = api.model('GroupsFields', {
-    'type': fields.String,
-    'id': fields.Integer,
-    'attributes': fields.Nested(groups_fields_attributes),
-})
-
-from .users import *
-from .abilities import *
-
-groups_fields_with_relationships = api.model('GroupsFieldsWithRelationships', {
-    'relationships': fields.Nested(api.model('GroupsRelationships', {
-        'users': fields.Nested(api.model('GroupsData', {
-            'data': fields.Nested(api.models['UsersFields'], as_list=True)
-        })),
-        'abilities': fields.Nested(api.model('ContainersData', {
-            'data': fields.Nested(api.models['AbilitiesFields'], as_list=True)
-        }))
-    }))
-})
-
 groups_fields_with_relationships_post_put = api.model('GroupsFieldsWithRelationshipsPost', {
     'relationships': fields.Nested(api.model('GroupsRelationshipsPost', {
         'users': fields.Nested(api.model('GroupsDataPost', {
@@ -49,7 +29,7 @@ groups_fields_with_relationships_post_put = api.model('GroupsFieldsWithRelations
     }))
 })
 
-groups_fields_get = api.inherit('GroupsFieldsGet', groups_fields_with_relationships, {
+groups_fields_get = api.inherit('GroupsFieldsGet', groups_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(groups_fields_attributes),
