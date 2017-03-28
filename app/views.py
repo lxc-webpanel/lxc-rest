@@ -38,7 +38,7 @@ class UsersList(Resource):
         for user in users:
             users_list.append(user.__jsonapi__())
 
-        return users_list.__jsonapi__()
+        return users_list
 
     @user_has('users_create')
     @api.expect(users_fields_post, validate=True)

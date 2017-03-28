@@ -4,6 +4,7 @@ from app import db
 from app.exceptions import *
 from passlib.apps import custom_app_context as pwd_context
 from sqlalchemy.ext.associationproxy import association_proxy
+import datetime
 
 
 def _user_find(u):
@@ -79,12 +80,13 @@ user_container_table = db.Table(
 
 class User(db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    admin = db.Column(db.Boolean, default=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    admin = db.Column(db.Boolean, default=False, nullable=False)
     name = db.Column(db.String(255))
-    username = db.Column(db.String(60), unique=True)
+    username = db.Column(db.String(60), unique=True, nullable=False)
+    registered_on = db.Column(db.DateTime, nullable=False)
     email = db.Column(db.String(120))
-    password = db.Column(db.String(100))
+    password = db.Column(db.String(100), nullable=False)
     _groups = db.relationship(
         'Group',
         secondary=user_group_table
@@ -109,6 +111,7 @@ class User(db.Model):
         admin=False,
         name=None,
         username=None,
+        registered_on=None,
         email=None,
         password=None,
         groups=None,
@@ -118,6 +121,7 @@ class User(db.Model):
         self.admin = admin
         self.name = name
         self.username = username
+        self.registered_on = datetime.datetime.now()
         self.email = email
         self.password = password
 
@@ -152,6 +156,7 @@ class User(db.Model):
                 'admin': self.admin,
                 'name': self.name,
                 'username': self.username,
+                'registered_on': self.registered_on,
                 'email': self.email
             }
         }

@@ -8,7 +8,8 @@ users_fields_attributes = api.model('UsersFieldsAttributes', {
     'admin': fields.Boolean(default=False),
     'username': fields.String,
     'name': fields.String,
-    'email': fields.String
+    'email': fields.String,
+    'registered_on': fields.DateTime(dt_format='rfc822')
 })
 
 users_fields_attributes_post = api.model('UsersFieldsAttributesPost', {
@@ -17,6 +18,13 @@ users_fields_attributes_post = api.model('UsersFieldsAttributesPost', {
     'name': fields.String(required=True, pattern='^(?!\s*$).+'),
     'email': fields.String(pattern=r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'),
     'password': fields.String(required=True, pattern='^(?!\s*$).+')
+})
+
+users_fields_attributes_put = api.model('UsersFieldsAttributesPut', {
+    'admin': fields.Boolean,
+    'name': fields.String(pattern='^(?!\s*$).+'),
+    'email': fields.String(pattern=r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'),
+    'password': fields.String(pattern='^(?!\s*$).+')
 })
 
 users_fields_with_relationships_post_put = api.model('UsersFieldsWithRelationshipsPost', {
@@ -49,5 +57,5 @@ users_fields_post = api.inherit('UsersFieldsPost', users_fields_with_relationshi
 
 users_fields_put = api.inherit('UsersFieldsPut', users_fields_with_relationships_post_put, {
     'type': fields.String(pattern='users'),
-    'attributes': fields.Nested(users_fields_attributes),
+    'attributes': fields.Nested(users_fields_attributes_put),
 })
