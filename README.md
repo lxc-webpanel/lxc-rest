@@ -7,23 +7,46 @@ Use it with [Dashboard](https://github.com/lxc-webpanel/dashdoard)
 [![Build Status](https://travis-ci.org/lxc-webpanel/lxc-rest.svg?branch=master)](https://travis-ci.org/lxc-webpanel/lxc-rest)
 [![Python version](https://img.shields.io/badge/Python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 
+---
 
 ## Installation
+### Clone
+```shell
+git clone --recursive https://github.com/lxc-webpanel/lxc-rest.git
+```
+
+### Install requirements
 ```shell
 apt install python3-lxc
 
-git clone --recursive https://github.com/lxc-webpanel/lxc-rest.git
-
 cd lxc-rest
-
 pip install -r requirements.txt
+```
 
-# Create database
+### Create database
+```shell
 python3 install/setup.py
+```
 
-# Run the server
+---
+
+### Run the server
+#### Werkzeug *(dev only)*
+```shell
 python3 run.py
 ```
+
+#### Gunicorn
+```shell
+gunicorn --bind :5000 app:app
+```
+
+#### uWSGI
+```shell
+uwsgi --socket :5000 --protocol=http --wsgi app:app
+```
+
+---
 
 ## Usage
 ### Auth
@@ -52,6 +75,7 @@ Set headers :
 | `Content-Type`  | `application/json` |
 | `Authorization` | `Bearer <token>`   |
 
+---
 
 ## Documentation
 

@@ -21,6 +21,7 @@ import gzip
 import socket
 import subprocess
 import psutil
+import json
 
 
 class UsersList(Resource):
@@ -47,7 +48,7 @@ class UsersList(Resource):
         """
         Create user
         """
-        data = request.get_json()
+        data = request.get_json()['data']
         if User.query.filter_by(username=data['attributes']['username']).first():
             api.abort(code=409, message='User already exists')
 
@@ -108,7 +109,7 @@ class Users(Resource):
         if not user:
             api.abort(code=404, message='User not found')
 
-        data = request.get_json()
+        data = request.get_json()['data']
 
         if 'name' in data['attributes']:
             user.name = data['attributes']['name']
@@ -171,7 +172,7 @@ class Me(Resource):
         """
         user = User.query.get(current_identity.id)
 
-        data = request.get_json()
+        data = request.get_json()['data']
 
         if 'name' in data['attributes']:
             user.name = data['attributes']['name']
@@ -236,7 +237,7 @@ class GroupsList(Resource):
         """
         Create group
         """
-        data = request.get_json()
+        data = request.get_json()['data']
 
         group = Group(name=data['attributes']['name'])
 
@@ -286,7 +287,7 @@ class Groups(Resource):
         if not group:
             api.abort(code=404, message='Group not found')
 
-        data = request.get_json()
+        data = request.get_json()['data']
 
         if 'name' in data['attributes']:
             group.name = data['attributes']['name']
@@ -367,7 +368,7 @@ class Abilities(Resource):
         """
         ability = Ability.query.get(id)
 
-        data = request.get_json()
+        data = request.get_json()['data']
 
         try:
             if len(data['relationships']['groups']['data']) >= 0:
@@ -405,8 +406,7 @@ class ContainersList(Resource):
         return containers
 
     @user_has('ct_create')
-    @api.expect(containers_fields_post)
-    @api.marshal_with(containers_fields_get, envelope='data')
+    @api.expect(containers_fields_post, validate=True)
     @api.doc(responses={
         201: 'Container created',
         409: 'Container already exists',
@@ -416,7 +416,7 @@ class ContainersList(Resource):
         """
         Create container
         """
-        data = request.get_json()
+        data = request.get_json()['data']
 
         if 'name' in data['attributes']:
             c = lxc.Container(data['attributes']['name'])
@@ -471,8 +471,7 @@ class Containers(Resource):
         api.abort(code=404, message='Container doesn\'t exists')
 
     @user_has('ct_update')
-    @api.expect(containers_fields_put)
-    @api.marshal_with(containers_fields_get, envelope='data')
+    @api.expect(containers_fields_put, validate=True)
     def put(self, id, d=None):
         """
         Update container
@@ -500,7 +499,7 @@ class Containers(Resource):
         if d:
             data = d
         else:
-            data = request.get_json()
+            data = request.get_json()['data']
 
         container = Container.query.get(id)
 
@@ -771,6 +770,44 @@ class Containers(Resource):
                     code=409, message='Can\'t destroy and/or stop container')
             return {}, 204
         api.abort(code=404, message='Container doesn\'t exists')
+
+
+class ContainersClone(Resource):
+    decorators = [jwt_required()]
+
+    @user_has('ct_clone')
+    @api.expect(containers_clone_post, validate=True)
+    def post(self, id):
+        """
+        Clone container
+        """
+        data = request.get_json()['data']
+
+        if 'name' in data['attributes']:
+            container = Container.query.get(id)
+            c = lxc.Container(container.name)
+
+            if c.defined and (id in current_identity.containers or current_identity.admin):
+                print(data['attributes']['name'])
+                c2 = lxc.Container(data['attributes']['name'])
+                if not c2.defined:
+                    c2 = c.clone(data['attributes']['name'], flags=lxc.LXC_CLONE_MAYBE_SNAPSHOT)
+                    if c2.defined:
+                        # Add container to database
+                        container = Container(name=data['attributes']['name'])
+                        db.session.add(container)
+                        db.session.commit()
+                        # Get container ID
+                        container = Container.query.filter_by(
+                            name=data['attributes']['name']).first()
+                        # Add container to allowed user's containers
+                        user = User.query.get(current_identity.id)
+                        user.containers.append(container.id)
+                        db.session.commit()
+
+                        return Containers.get(self, container.id)
+
+            api.abort(code=404, message='Container doesn\'t exists')
 
 
 class ContainersStart(Resource):

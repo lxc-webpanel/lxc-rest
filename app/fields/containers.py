@@ -156,3 +156,13 @@ containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_wit
     'type': fields.String(pattern='containers'),
     'attributes': fields.Nested(containers_fields_attributes),
 })
+
+
+containers_clone_attributes = api.model('ContainersClone', {
+    'name': fields.String,
+})
+
+containers_clone_post = api.model('ContainersClonePost', {
+    'type': fields.String(pattern='containers'),
+    'attributes': fields.Nested(containers_clone_attributes),
+})

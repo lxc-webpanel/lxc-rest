@@ -22,7 +22,7 @@ try:
 except IOError:
     pass
 
-# Load the file specified by the APP_CONFIG_FILE environment variable
+# Load the file specified by the LWP_CONFIG_FILE environment variable
 # Variables defined here will override those in the default configuration
 try:
     app.config.from_envvar('LWP_CONFIG_FILE')

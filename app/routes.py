@@ -24,6 +24,8 @@ nslxc.add_resource(ContainersList,
                    '/containers')
 nslxc.add_resource(Containers,
                    '/containers/<int:id>')
+nslxc.add_resource(ContainersClone,
+                   '/containers/<int:id>/clone')
 nslxc.add_resource(ContainersStart,
                    '/containers/<int:id>/start')
 nslxc.add_resource(ContainersFreeze,
