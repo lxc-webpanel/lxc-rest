@@ -43,10 +43,14 @@ host_stats_fields_attributes = api.model('HostStats', {
     'kernel': fields.String
 })
 
-host_stats_fields_get = api.model('HostStatsFieldsGet', {
+_host_stats_fields_get = api.model('HostStatsFieldsGet', {
     'type': fields.String,
     'attributes': fields.Nested(host_stats_fields_attributes),
 })
+
+
+host_stats_fields_get = api.model('HostStatsRootGet', { 'data': fields.Nested(_host_stats_fields_get) })
+
 
 host_reboot_fields_post = api.model('HostRebootModelPost', {
     'message': fields.String

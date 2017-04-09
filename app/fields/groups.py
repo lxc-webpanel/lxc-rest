@@ -29,18 +29,23 @@ groups_fields_with_relationships_post_put = api.model('GroupsFieldsWithRelations
     }))
 })
 
-groups_fields_get = api.inherit('GroupsFieldsGet', groups_fields_with_relationships_post_put, {
+_groups_fields_get = api.inherit('GroupsFieldsGet', groups_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(groups_fields_attributes),
 })
 
-groups_fields_post = api.inherit('GroupsFieldsPost', groups_fields_with_relationships_post_put, {
+_groups_fields_post = api.inherit('GroupsFieldsPost', groups_fields_with_relationships_post_put, {
     'type': fields.String(pattern='groups'),
     'attributes': fields.Nested(groups_fields_attributes_post),
 })
 
-groups_fields_put = api.inherit('GroupsFieldsPut', groups_fields_with_relationships_post_put, {
+_groups_fields_put = api.inherit('GroupsFieldsPut', groups_fields_with_relationships_post_put, {
     'type': fields.String(pattern='groups'),
     'attributes': fields.Nested(groups_fields_attributes),
 })
+
+
+groups_fields_get = api.model('GroupsRootGet', { 'data': fields.Nested(_groups_fields_get) })
+groups_fields_post = api.model('GroupsRootPost', { 'data': fields.Nested(_groups_fields_post) })
+groups_fields_put = api.model('GroupsRootPut', { 'data': fields.Nested(_groups_fields_put) })

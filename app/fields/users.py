@@ -44,18 +44,23 @@ users_fields_with_relationships_post_put = api.model('UsersFieldsWithRelationshi
     }))
 })
 
-users_fields_get = api.inherit('UsersFieldsGet', users_fields_with_relationships_post_put, {
+_users_fields_get = api.inherit('UsersFieldsGet', users_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(users_fields_attributes),
 })
 
-users_fields_post = api.inherit('UsersFieldsPost', users_fields_with_relationships_post_put, {
+_users_fields_post = api.inherit('UsersFieldsPost', users_fields_with_relationships_post_put, {
     'type': fields.String(pattern='users'),
     'attributes': fields.Nested(users_fields_attributes_post),
 })
 
-users_fields_put = api.inherit('UsersFieldsPut', users_fields_with_relationships_post_put, {
+_users_fields_put = api.inherit('UsersFieldsPut', users_fields_with_relationships_post_put, {
     'type': fields.String(pattern='users'),
     'attributes': fields.Nested(users_fields_attributes_put),
 })
+
+
+users_fields_get = api.model('UsersRootGet', { 'data': fields.Nested(_users_fields_get) })
+users_fields_post = api.model('UsersRootPost', { 'data': fields.Nested(_users_fields_post) })
+users_fields_put = api.model('UsersRootPut', { 'data': fields.Nested(_users_fields_put) })

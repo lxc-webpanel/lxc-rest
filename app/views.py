@@ -28,7 +28,7 @@ class UsersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos_all')
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def get(self):
         """
         Get users list
@@ -39,11 +39,11 @@ class UsersList(Resource):
         for user in users:
             users_list.append(user.__jsonapi__())
 
-        return users_list
+        return { 'data': users_list }
 
     @user_has('users_create')
     @api.expect(users_fields_post, validate=True)
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def post(self):
         """
         Create user
@@ -78,14 +78,14 @@ class UsersList(Resource):
         db.session.add(user)
         db.session.commit()
 
-        return user.__jsonapi__(), 201
+        return { 'data': user.__jsonapi__() }, 201
 
 
 class Users(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos')
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def get(self, id):
         """
         Get user
@@ -95,11 +95,11 @@ class Users(Resource):
         if not user:
             api.abort(code=404, message='User not found')
 
-        return user.__jsonapi__()
+        return { 'data': user.__jsonapi__() }
 
     @user_has('users_update')
     @api.expect(users_fields_put, validate=True)
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def put(self, id):
         """
         Update user
@@ -135,7 +135,7 @@ class Users(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return user.__jsonapi__()
+        return { 'data': user.__jsonapi__() }
 
     @user_has('users_delete')
     def delete(self, id):
@@ -156,16 +156,16 @@ class Users(Resource):
 class Me(Resource):
     decorators = [jwt_required()]
 
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def get(self):
         """
         Get me
         """
-        return current_identity.__jsonapi__()
+        return { 'data': current_identity.__jsonapi__() }
 
     @user_has('me_edit')
     @api.expect(users_fields_put, validate=True)
-    @api.marshal_with(users_fields_get, envelope='data')
+    @api.marshal_with(users_fields_get)
     def put(self):
         """
         Update me
@@ -198,7 +198,7 @@ class Me(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return user.__jsonapi__()
+        return { 'data': user.__jsonapi__() }
 
     @user_has('me_edit')
     def delete(self):
@@ -217,7 +217,7 @@ class GroupsList(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos_all')
-    @api.marshal_with(groups_fields_get, envelope='data')
+    @api.marshal_with(groups_fields_get)
     def get(self):
         """
         Get groups list
@@ -228,11 +228,11 @@ class GroupsList(Resource):
         for group in groups:
             groups_list.append(group.__jsonapi__())
 
-        return groups_list
+        return { 'data': groups_list }
 
     @user_has('groups_create')
     @api.expect(groups_fields_post, validate=True)
-    @api.marshal_with(groups_fields_get, envelope='data')
+    @api.marshal_with(groups_fields_get)
     def post(self):
         """
         Create group
@@ -256,14 +256,14 @@ class GroupsList(Resource):
         db.session.add(group)
         db.session.commit()
 
-        return group.__jsonapi__(), 201
+        return { 'data': group.__jsonapi__() }, 201
 
 
 class Groups(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos')
-    @api.marshal_with(groups_fields_get, envelope='data')
+    @api.marshal_with(groups_fields_get)
     def get(self, id):
         """
         Get group
@@ -273,11 +273,11 @@ class Groups(Resource):
         if not group:
             api.abort(code=404, message='Group not found')
 
-        return group.__jsonapi__()
+        return { 'data': group.__jsonapi__() }
 
     @user_has('groups_update')
     @api.expect(groups_fields_put, validate=True)
-    @api.marshal_with(groups_fields_get, envelope='data')
+    @api.marshal_with(groups_fields_get)
     def put(self, id):
         """
         Update group
@@ -307,7 +307,7 @@ class Groups(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return group.__jsonapi__()
+        return { 'data': group.__jsonapi__() }
 
     @user_has('groups_delete')
     def delete(self, id):
@@ -329,7 +329,7 @@ class AbilitiesList(Resource):
     decorators = [jwt_required()]
 
     @user_has('abilities_infos_all')
-    @api.marshal_with(abilities_fields_get, envelope='data')
+    @api.marshal_with(abilities_fields_get)
     def get(self):
         """
         Get abilities list
@@ -340,14 +340,14 @@ class AbilitiesList(Resource):
         for ability in abilities:
             abilities_list.append(ability.__jsonapi__())
 
-        return abilities_list
+        return { 'data': abilities_list }
 
 
 class Abilities(Resource):
     decorators = [jwt_required()]
 
     @user_has('abilities_infos')
-    @api.marshal_with(abilities_fields_get, envelope='data')
+    @api.marshal_with(abilities_fields_get)
     def get(self, id):
         """
         Get ability
@@ -357,11 +357,11 @@ class Abilities(Resource):
         if not ability:
             api.abort(code=404, message='Ability not found')
 
-        return ability.__jsonapi__()
+        return { 'data': ability.__jsonapi__() }
 
     @user_has('abilities_update')
     @api.expect(abilities_fields_put, validate=True)
-    @api.marshal_with(abilities_fields_get, envelope='data')
+    @api.marshal_with(abilities_fields_get)
     def put(self, id):
         """
         Update ability
@@ -378,7 +378,7 @@ class Abilities(Resource):
         except KeyError:
             pass
 
-        return ability.__jsonapi__()
+        return { 'data': ability.__jsonapi__() }
 
 
 ##################
@@ -388,7 +388,7 @@ class ContainersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('ct_infos')
-    @api.marshal_with(containers_fields_get, envelope='data')
+    @api.marshal_with(containers_fields_get)
     def get(self):
         """
         Get containers list
@@ -403,10 +403,11 @@ class ContainersList(Resource):
                 container_json['attributes'] = infos
                 containers.append(container_json)
 
-        return containers
+        return { 'data': containers }
 
     @user_has('ct_create')
     @api.expect(containers_fields_post, validate=True)
+    @api.marshal_with(containers_fields_get)
     @api.doc(responses={
         201: 'Container created',
         409: 'Container already exists',
@@ -454,7 +455,7 @@ class Containers(Resource):
     decorators = [jwt_required()]
 
     @user_has('ct_infos')
-    @api.marshal_with(containers_fields_get, envelope='data')
+    @api.marshal_with(containers_fields_get)
     def get(self, id):
         """
         Get container
@@ -467,11 +468,12 @@ class Containers(Resource):
             container_json = container.__jsonapi__()
             container_json['attributes'] = infos
 
-            return container_json
+            return { 'data': container_json }
         api.abort(code=404, message='Container doesn\'t exists')
 
     @user_has('ct_update')
     @api.expect(containers_fields_put, validate=True)
+    @api.marshal_with(containers_fields_get)
     def put(self, id, d=None):
         """
         Update container
@@ -777,6 +779,7 @@ class ContainersClone(Resource):
 
     @user_has('ct_clone')
     @api.expect(containers_clone_post, validate=True)
+    @api.marshal_with(containers_fields_get)
     def post(self, id):
         """
         Clone container
@@ -1023,7 +1026,7 @@ class HostStats(Resource):
     decorators = [jwt_required()]
 
     @user_has('host_stats')
-    @api.marshal_with(host_stats_fields_get, envelope='data')
+    @api.marshal_with(host_stats_fields_get)
     def get(self, container=False):
         """
         Get host stats (uptime, cpu, ram, etc)
@@ -1104,7 +1107,7 @@ class HostStats(Resource):
         else:
             output = json_output
 
-        return output
+        return { 'data': output }
 
 host_reboot_parser = api.parser()
 host_reboot_parser.add_argument('message', type=str, location='json')

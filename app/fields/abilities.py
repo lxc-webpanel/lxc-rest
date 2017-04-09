@@ -3,7 +3,6 @@
 from flask_restplus import fields
 from app import api
 
-
 abilities_fields_attributes = api.model('AbilitiesFieldsAttributes', {
     'name': fields.String
 })
@@ -19,12 +18,16 @@ abilities_fields_with_relationships_put = api.model('AbilitiesFieldsWithRelation
     }))
 })
 
-abilities_fields_get = api.inherit('AbilitiesFieldsGet', abilities_fields_with_relationships_put, {
+_abilities_fields_get = api.inherit('AbilitiesFieldsGet', abilities_fields_with_relationships_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(abilities_fields_attributes),
 })
 
-abilities_fields_put = api.inherit('AbilitiesFieldsPut', abilities_fields_with_relationships_put, {
+_abilities_fields_put = api.inherit('AbilitiesFieldsPut', abilities_fields_with_relationships_put, {
     'type': fields.String(pattern='abilities'),
 })
+
+
+abilities_fields_put = api.model('AbilitiesRootPut', { 'data': fields.Nested(_abilities_fields_put) })
+abilities_fields_get = api.model('AbilitiesRootGet', { 'data': fields.Nested(_abilities_fields_get) })

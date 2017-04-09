@@ -141,28 +141,35 @@ containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithR
     }))
 })
 
-containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships_post_put, {
+_containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships_post_put, {
     'type': fields.String,
     'id': fields.Integer,
     'attributes': fields.Nested(containers_fields_attributes),
 })
 
-containers_fields_post = api.inherit('ContainersFieldsPost', containers_fields_with_relationships_post_put, {
+_containers_fields_post = api.inherit('ContainersFieldsPost', containers_fields_with_relationships_post_put, {
     'type': fields.String(pattern='containers'),
     'attributes': fields.Nested(containers_fields_attributes_post),
 })
 
-containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_with_relationships_post_put, {
+_containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_with_relationships_post_put, {
     'type': fields.String(pattern='containers'),
     'attributes': fields.Nested(containers_fields_attributes),
 })
+
+
+containers_fields_get = api.model('ContainersRootGet', { 'data': fields.Nested(_containers_fields_get) })
+containers_fields_post = api.model('ContainersRootPost', { 'data': fields.Nested(_containers_fields_post) })
+containers_fields_put = api.model('ContainersRootPut', { 'data': fields.Nested(_containers_fields_put) })
 
 
 containers_clone_attributes = api.model('ContainersClone', {
     'name': fields.String,
 })
 
-containers_clone_post = api.model('ContainersClonePost', {
+_containers_clone_post = api.model('ContainersClonePost', {
     'type': fields.String(pattern='containers'),
     'attributes': fields.Nested(containers_clone_attributes),
 })
+
+containers_clone_post = api.model('ContainersCloneRootPost', { 'data': fields.Nested(_containers_clone_post) })
