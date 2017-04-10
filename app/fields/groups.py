@@ -47,5 +47,6 @@ _groups_fields_put = api.inherit('GroupsFieldsPut', groups_fields_with_relations
 
 
 groups_fields_get = api.model('GroupsRootGet', { 'data': fields.Nested(_groups_fields_get) })
+groups_fields_get_many = api.model('GroupsRootGetMany', { 'data': fields.Nested(_groups_fields_get, as_list=True) })
 groups_fields_post = api.model('GroupsRootPost', { 'data': fields.Nested(_groups_fields_post) })
 groups_fields_put = api.model('GroupsRootPut', { 'data': fields.Nested(_groups_fields_put) })

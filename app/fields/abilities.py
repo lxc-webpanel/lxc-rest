@@ -29,5 +29,6 @@ _abilities_fields_put = api.inherit('AbilitiesFieldsPut', abilities_fields_with_
 })
 
 
-abilities_fields_put = api.model('AbilitiesRootPut', { 'data': fields.Nested(_abilities_fields_put) })
 abilities_fields_get = api.model('AbilitiesRootGet', { 'data': fields.Nested(_abilities_fields_get) })
+abilities_fields_get_many = api.model('AbilitiesRootGetMany', { 'data': fields.Nested(_abilities_fields_get, as_list=True) })
+abilities_fields_put = api.model('AbilitiesRootPut', { 'data': fields.Nested(_abilities_fields_put) })

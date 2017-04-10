@@ -28,7 +28,7 @@ class UsersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('users_infos_all')
-    @api.marshal_with(users_fields_get)
+    @api.marshal_with(users_fields_get_many)
     def get(self):
         """
         Get users list
@@ -217,7 +217,7 @@ class GroupsList(Resource):
     decorators = [jwt_required()]
 
     @user_has('groups_infos_all')
-    @api.marshal_with(groups_fields_get)
+    @api.marshal_with(groups_fields_get_many)
     def get(self):
         """
         Get groups list
@@ -329,7 +329,7 @@ class AbilitiesList(Resource):
     decorators = [jwt_required()]
 
     @user_has('abilities_infos_all')
-    @api.marshal_with(abilities_fields_get)
+    @api.marshal_with(abilities_fields_get_many)
     def get(self):
         """
         Get abilities list
@@ -388,7 +388,7 @@ class ContainersList(Resource):
     decorators = [jwt_required()]
 
     @user_has('ct_infos')
-    @api.marshal_with(containers_fields_get)
+    @api.marshal_with(containers_fields_get_many)
     def get(self):
         """
         Get containers list

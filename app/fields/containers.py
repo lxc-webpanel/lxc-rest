@@ -159,6 +159,7 @@ _containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_wi
 
 
 containers_fields_get = api.model('ContainersRootGet', { 'data': fields.Nested(_containers_fields_get) })
+containers_fields_get_many = api.model('ContainersRootGetMany', { 'data': fields.Nested(_containers_fields_get, as_list=True) })
 containers_fields_post = api.model('ContainersRootPost', { 'data': fields.Nested(_containers_fields_post) })
 containers_fields_put = api.model('ContainersRootPut', { 'data': fields.Nested(_containers_fields_put) })
 

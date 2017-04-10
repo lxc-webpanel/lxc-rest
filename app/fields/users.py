@@ -62,5 +62,6 @@ _users_fields_put = api.inherit('UsersFieldsPut', users_fields_with_relationship
 
 
 users_fields_get = api.model('UsersRootGet', { 'data': fields.Nested(_users_fields_get) })
+users_fields_get_many = api.model('UsersRootGetMany', { 'data': fields.Nested(_users_fields_get, as_list=True) })
 users_fields_post = api.model('UsersRootPost', { 'data': fields.Nested(_users_fields_post) })
 users_fields_put = api.model('UsersRootPut', { 'data': fields.Nested(_users_fields_put) })
