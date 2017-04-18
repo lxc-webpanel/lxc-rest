@@ -49,23 +49,6 @@ uwsgi --socket :5000 --protocol=http --wsgi app:app
 ---
 
 ## Usage
-### Auth
-
-**POST** /api/v1/auth
-```json
-{
-	"username": "admin",
-	"password": "admin"
-}
-```
-
-> Response :
-> ```json
-> {
-> 	"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0NDg2NDA1MTIsInVzZXJfaWQiOjF9.oHl2v9cToaiu_skElCbkJ_-UPELnneJVbv67sDbmfMQ"
-> }
-> ```
-
 ### Requests
 
 Set headers :

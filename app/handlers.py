@@ -1,22 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from app import app, jwt, db
+from flask import jsonify
+from app import app, jwt, db, api
 from .models import User, Container
+from .decorators import import_user
 import lxc
 
 
-@jwt.authentication_handler
-def authenticate(username, password):
-    user = User.query.filter_by(username=username).first()
-    if not user or not user.verify_password(password):
-        return False
-    return user
-
-
-@jwt.identity_handler
-def identity(payload):
-    return User.query.get(payload['identity'])
-
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
 
 @app.before_request
 def populate_containers_table():

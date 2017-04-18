@@ -14,9 +14,8 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///../lxc-webpanel.sqlite'
 SQLALCHEMY_COMMIT_ON_TEARDOWN = False
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-JWT_EXPIRATION_DELTA = timedelta(seconds=10000)
-JWT_AUTH_HEADER_PREFIX = 'Bearer'
-JWT_AUTH_URL_RULE = '/api/v1/auth'
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
+JWT_HEADER_TYPE = 'Bearer'
 
 SWAGGER_UI_DOC_EXPANSION = 'list' # none, list or full
 

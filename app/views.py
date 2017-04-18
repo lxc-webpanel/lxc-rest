@@ -3,10 +3,11 @@
 from flask import request
 from flask_restplus import Resource, reqparse
 from flask_restplus.reqparse import Argument
-from flask_jwt import jwt_required, current_identity
+from flask_jwt_extended import jwt_required, create_access_token
 from app import db, api
 from .models import *
 from .decorators import *
+from .fields.auth import *
 from .fields.users import *
 from .fields.groups import *
 from .fields.abilities import *
@@ -21,11 +22,29 @@ import gzip
 import socket
 import subprocess
 import psutil
-import json
 
+
+class Auth(Resource):
+
+    @api.marshal_with(auth_fields_get)
+    @api.expect(auth_fields_post, validate=True)
+    def post(self):
+        """
+        JWT auth
+        """
+        username = request.json.get('username', None)
+        password = request.json.get('password', None)
+
+        user = User.query.filter_by(username=username).first()
+
+        if not user or not user.verify_password(password):
+            api.abort(code=401, message='Incorrect user or password')
+
+        ret = {'access_token': create_access_token(identity=user)}
+        return ret
 
 class UsersList(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('users_infos_all')
     @api.marshal_with(users_fields_get_many)
@@ -48,6 +67,7 @@ class UsersList(Resource):
         """
         Create user
         """
+        current_identity = import_user()
         data = request.get_json()['data']
         if User.query.filter_by(username=data['attributes']['username']).first():
             api.abort(code=409, message='User already exists')
@@ -82,7 +102,7 @@ class UsersList(Resource):
 
 
 class Users(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('users_infos')
     @api.marshal_with(users_fields_get)
@@ -104,6 +124,7 @@ class Users(Resource):
         """
         Update user
         """
+        current_identity = import_user()
         user = User.query.get(id)
 
         if not user:
@@ -154,13 +175,14 @@ class Users(Resource):
 
 
 class Me(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @api.marshal_with(users_fields_get)
     def get(self):
         """
         Get me
         """
+        current_identity = import_user()
         return { 'data': current_identity.__jsonapi__() }
 
     @user_has('me_edit')
@@ -170,6 +192,7 @@ class Me(Resource):
         """
         Update me
         """
+        current_identity = import_user()
         user = User.query.get(current_identity.id)
 
         data = request.get_json()['data']
@@ -205,6 +228,7 @@ class Me(Resource):
         """
         Delete me (stupid)
         """
+        current_identity = import_user()
         user = User.query.get(current_identity.id)
 
         db.session.delete(user)
@@ -214,7 +238,7 @@ class Me(Resource):
 
 
 class GroupsList(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('groups_infos_all')
     @api.marshal_with(groups_fields_get_many)
@@ -260,7 +284,7 @@ class GroupsList(Resource):
 
 
 class Groups(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('groups_infos')
     @api.marshal_with(groups_fields_get)
@@ -326,7 +350,7 @@ class Groups(Resource):
 
 
 class AbilitiesList(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('abilities_infos_all')
     @api.marshal_with(abilities_fields_get_many)
@@ -344,7 +368,7 @@ class AbilitiesList(Resource):
 
 
 class Abilities(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('abilities_infos')
     @api.marshal_with(abilities_fields_get)
@@ -385,7 +409,7 @@ class Abilities(Resource):
 # Containers API #
 ##################
 class ContainersList(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_infos')
     @api.marshal_with(containers_fields_get_many)
@@ -393,6 +417,7 @@ class ContainersList(Resource):
         """
         Get containers list
         """
+        current_identity = import_user()
         containers = []
 
         for c in lxc.list_containers():
@@ -417,6 +442,7 @@ class ContainersList(Resource):
         """
         Create container
         """
+        current_identity = import_user()
         data = request.get_json()['data']
 
         if 'name' in data['attributes']:
@@ -452,7 +478,7 @@ class ContainersList(Resource):
 
 
 class Containers(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_infos')
     @api.marshal_with(containers_fields_get)
@@ -460,6 +486,7 @@ class Containers(Resource):
         """
         Get container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -503,6 +530,7 @@ class Containers(Resource):
         else:
             data = request.get_json()['data']
 
+        current_identity = import_user()
         container = Container.query.get(id)
 
         c = lxc.Container(container.name)
@@ -675,8 +703,6 @@ class Containers(Resource):
                                        i, data['attributes']['lxc']['network'][i]['hwaddr'])
                         if 'ipv4' in data['attributes']['lxc']['network'][i]:
                             if '_' in data['attributes']['lxc']['network'][i]['ipv4']:
-                                print(data['attributes']['lxc'][
-                                      'network'][i]['ipv4']['_'])
                                 set_config(c, 'lxc.network.%s.ipv4' %
                                            i, data['attributes']['lxc']['network'][i]['ipv4']['_'])
 
@@ -759,6 +785,7 @@ class Containers(Resource):
         """
         Destroy container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -775,7 +802,7 @@ class Containers(Resource):
 
 
 class ContainersClone(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_clone')
     @api.expect(containers_clone_post, validate=True)
@@ -784,6 +811,7 @@ class ContainersClone(Resource):
         """
         Clone container
         """
+        current_identity = import_user()
         data = request.get_json()['data']
 
         if 'name' in data['attributes']:
@@ -791,7 +819,6 @@ class ContainersClone(Resource):
             c = lxc.Container(container.name)
 
             if c.defined and (id in current_identity.containers or current_identity.admin):
-                print(data['attributes']['name'])
                 c2 = lxc.Container(data['attributes']['name'])
                 if not c2.defined:
                     c2 = c.clone(data['attributes']['name'], flags=lxc.LXC_CLONE_MAYBE_SNAPSHOT)
@@ -814,13 +841,14 @@ class ContainersClone(Resource):
 
 
 class ContainersStart(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_start')
     def post(self, id):
         """
         Start container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -835,13 +863,14 @@ class ContainersStart(Resource):
 
 
 class ContainersFreeze(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_freeze')
     def post(self, id):
         """
         Freeze container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -856,13 +885,14 @@ class ContainersFreeze(Resource):
 
 
 class ContainersUnfreeze(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_unfreeze')
     def post(self, id):
         """
         Unfreeze container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -877,13 +907,14 @@ class ContainersUnfreeze(Resource):
 
 
 class ContainersStop(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_stop')
     def post(self, id):
         """
         Stop container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -898,13 +929,14 @@ class ContainersStop(Resource):
 
 
 class ContainersShutdown(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_stop')
     def post(self, id):
         """
         Shutdown container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -919,13 +951,14 @@ class ContainersShutdown(Resource):
 
 
 class ContainersRestart(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('ct_restart')
     def post(self, id):
         """
         Restart container
         """
+        current_identity = import_user()
         container = Container.query.get(id)
         c = lxc.Container(container.name)
 
@@ -940,7 +973,7 @@ class ContainersRestart(Resource):
 
 
 class LxcCheckConfig(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('lxc_infos')
     def get(self):
@@ -1023,7 +1056,7 @@ class LxcCheckConfig(Resource):
 
 
 class HostStats(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('host_stats')
     @api.marshal_with(host_stats_fields_get)
@@ -1114,7 +1147,7 @@ host_reboot_parser.add_argument('message', type=str, location='json')
 
 
 class HostReboot(Resource):
-    decorators = [jwt_required()]
+    decorators = [jwt_required]
 
     @user_has('host_reboot')
     @api.expect(host_reboot_fields_post)

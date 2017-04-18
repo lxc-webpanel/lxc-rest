@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from app import nslxc, nslwp
+from app import auth, nslxc, nslwp
 from .views import *
+
+# Auth route
+auth.add_resource(Auth, '/auth')
 
 # Users routes
 nslwp.add_resource(UsersList, '/users')

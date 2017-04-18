@@ -7,11 +7,12 @@ from .models import *
 
 def import_user():
     try:
-        from flask_jwt import current_identity
+        from flask_jwt_extended import get_jwt_identity
+        current_identity = User.query.get(int(get_jwt_identity()))
         return current_identity
     except ImportError:
         raise ImportError(
-            'User argument not passed and Flask-Login current_identity could not be imported.')
+            'User argument not passed')
 
 
 def user_has(ability, get_user=import_user):
@@ -33,18 +34,3 @@ def user_has(ability, get_user=import_user):
                 raise Forbidden("You do not have access")
         return inner
     return wrapper
-
-
-# def user_is(role, get_user=import_user):
-#     """
-#     Takes an role (a string name of either a role or an ability) and returns the function if the user has that role
-#     """
-#     def wrapper(func):
-#         @wraps(func)
-#         def inner(*args, **kwargs):
-#             current_identity = get_user()
-#             if role in current_identity.roles:
-#                 return func(*args, **kwargs)
-#             raise Forbidden("You do not have access")
-#         return inner
-#     return wrapper
