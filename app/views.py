@@ -65,7 +65,7 @@ class AuthCheck(Resource):
 
     @api.doc(responses={
         200: 'Token OK',
-        401: 'Token invalid or expired'
+        401: 'Token invalid or expired',
         422: 'Signature verification failed'
     })
     def get(self):
