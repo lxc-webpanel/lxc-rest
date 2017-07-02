@@ -31,7 +31,7 @@ class Auth(Resource):
     @api.expect(auth_fields_post, validate=True)
     def post(self):
         """
-        JWT auth
+        Get Json Web Token
         """
         username = request.json.get('username', None)
         password = request.json.get('password', None)
@@ -50,6 +50,9 @@ class AuthRefresh(Resource):
 
     @api.marshal_with(auth_fields_get)
     def post(self):
+        """
+        Get new token with valid token
+        """
         current_identity = import_user()
         ret = {
             'access_token': create_access_token(identity=current_identity)
@@ -62,9 +65,13 @@ class AuthCheck(Resource):
 
     @api.doc(responses={
         200: 'Token OK',
+        401: 'Token invalid or expired'
         422: 'Signature verification failed'
     })
     def get(self):
+        """
+        Check token
+        """
         return {}, 200
 
 
