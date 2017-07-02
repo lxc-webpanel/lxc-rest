@@ -3,8 +3,10 @@
 from app import auth, nslxc, nslwp
 from .views import *
 
-# Auth route
+# Auth routes
 auth.add_resource(Auth, '/auth')
+auth.add_resource(AuthRefresh, '/auth/refresh')
+auth.add_resource(AuthCheck, '/auth/check')
 
 # Users routes
 nslwp.add_resource(UsersList, '/users')

@@ -3,7 +3,8 @@
 from flask import request
 from flask_restplus import Resource, reqparse
 from flask_restplus.reqparse import Argument
-from flask_jwt_extended import jwt_required, create_access_token
+from flask_jwt_extended import jwt_required, create_access_token, \
+    jwt_refresh_token_required
 from app import db, api
 from .models import *
 from .decorators import *
@@ -43,6 +44,30 @@ class Auth(Resource):
         ret = {'access_token': create_access_token(identity=user)}
         return ret
 
+
+class AuthRefresh(Resource):
+    decorators = [jwt_required]
+
+    @api.marshal_with(auth_fields_get)
+    def post(self):
+        current_identity = import_user()
+        ret = {
+            'access_token': create_access_token(identity=current_identity)
+        }
+        return ret
+
+
+class AuthCheck(Resource):
+    decorators = [jwt_required]
+
+    @api.doc(responses={
+        200: 'Token OK',
+        422: 'Signature verification failed'
+    })
+    def get(self):
+        return {}, 200
+
+
 class UsersList(Resource):
     decorators = [jwt_required]
 
@@ -58,7 +83,7 @@ class UsersList(Resource):
         for user in users:
             users_list.append(user.__jsonapi__())
 
-        return { 'data': users_list }
+        return {'data': users_list}
 
     @user_has('users_create')
     @api.expect(users_fields_post, validate=True)
@@ -98,7 +123,7 @@ class UsersList(Resource):
         db.session.add(user)
         db.session.commit()
 
-        return { 'data': user.__jsonapi__() }, 201
+        return {'data': user.__jsonapi__()}, 201
 
 
 class Users(Resource):
@@ -115,7 +140,7 @@ class Users(Resource):
         if not user:
             api.abort(code=404, message='User not found')
 
-        return { 'data': user.__jsonapi__() }
+        return {'data': user.__jsonapi__()}
 
     @user_has('users_update')
     @api.expect(users_fields_put, validate=True)
@@ -156,7 +181,7 @@ class Users(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return { 'data': user.__jsonapi__() }
+        return {'data': user.__jsonapi__()}
 
     @user_has('users_delete')
     def delete(self, id):
@@ -183,7 +208,7 @@ class Me(Resource):
         Get me
         """
         current_identity = import_user()
-        return { 'data': current_identity.__jsonapi__() }
+        return {'data': current_identity.__jsonapi__()}
 
     @user_has('me_edit')
     @api.expect(users_fields_put, validate=True)
@@ -221,7 +246,7 @@ class Me(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return { 'data': user.__jsonapi__() }
+        return {'data': user.__jsonapi__()}
 
     @user_has('me_edit')
     def delete(self):
@@ -252,7 +277,7 @@ class GroupsList(Resource):
         for group in groups:
             groups_list.append(group.__jsonapi__())
 
-        return { 'data': groups_list }
+        return {'data': groups_list}
 
     @user_has('groups_create')
     @api.expect(groups_fields_post, validate=True)
@@ -280,7 +305,7 @@ class GroupsList(Resource):
         db.session.add(group)
         db.session.commit()
 
-        return { 'data': group.__jsonapi__() }, 201
+        return {'data': group.__jsonapi__()}, 201
 
 
 class Groups(Resource):
@@ -297,7 +322,7 @@ class Groups(Resource):
         if not group:
             api.abort(code=404, message='Group not found')
 
-        return { 'data': group.__jsonapi__() }
+        return {'data': group.__jsonapi__()}
 
     @user_has('groups_update')
     @api.expect(groups_fields_put, validate=True)
@@ -331,7 +356,7 @@ class Groups(Resource):
         if len(data) > 0:
             db.session.commit()
 
-        return { 'data': group.__jsonapi__() }
+        return {'data': group.__jsonapi__()}
 
     @user_has('groups_delete')
     def delete(self, id):
@@ -364,7 +389,7 @@ class AbilitiesList(Resource):
         for ability in abilities:
             abilities_list.append(ability.__jsonapi__())
 
-        return { 'data': abilities_list }
+        return {'data': abilities_list}
 
 
 class Abilities(Resource):
@@ -381,7 +406,7 @@ class Abilities(Resource):
         if not ability:
             api.abort(code=404, message='Ability not found')
 
-        return { 'data': ability.__jsonapi__() }
+        return {'data': ability.__jsonapi__()}
 
     @user_has('abilities_update')
     @api.expect(abilities_fields_put, validate=True)
@@ -402,7 +427,7 @@ class Abilities(Resource):
         except KeyError:
             pass
 
-        return { 'data': ability.__jsonapi__() }
+        return {'data': ability.__jsonapi__()}
 
 
 ##################
@@ -428,7 +453,7 @@ class ContainersList(Resource):
                 container_json['attributes'] = infos
                 containers.append(container_json)
 
-        return { 'data': containers }
+        return {'data': containers}
 
     @user_has('ct_create')
     @api.expect(containers_fields_post, validate=True)
@@ -495,7 +520,7 @@ class Containers(Resource):
             container_json = container.__jsonapi__()
             container_json['attributes'] = infos
 
-            return { 'data': container_json }
+            return {'data': container_json}
         api.abort(code=404, message='Container doesn\'t exists')
 
     @user_has('ct_update')
@@ -821,7 +846,8 @@ class ContainersClone(Resource):
             if c.defined and (id in current_identity.containers or current_identity.admin):
                 c2 = lxc.Container(data['attributes']['name'])
                 if not c2.defined:
-                    c2 = c.clone(data['attributes']['name'], flags=lxc.LXC_CLONE_MAYBE_SNAPSHOT)
+                    c2 = c.clone(data['attributes']['name'],
+                                 flags=lxc.LXC_CLONE_MAYBE_SNAPSHOT)
                     if c2.defined:
                         # Add container to database
                         container = Container(name=data['attributes']['name'])
@@ -1140,7 +1166,7 @@ class HostStats(Resource):
         else:
             output = json_output
 
-        return { 'data': output }
+        return {'data': output}
 
 host_reboot_parser = api.parser()
 host_reboot_parser.add_argument('message', type=str, location='json')
