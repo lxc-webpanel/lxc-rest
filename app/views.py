@@ -1102,7 +1102,7 @@ class HostStats(Resource):
 
         cpu_count_logical = psutil.cpu_count()
         cpu_count_physical = psutil.cpu_count(logical=False)
-        cpu_percent = psutil.cpu_percent(interval=0.2)
+        cpu_percent = psutil.cpu_percent(interval=0.3)
 
         virtual_memory = psutil.virtual_memory()
         swap_memory = psutil.swap_memory()
