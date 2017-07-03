@@ -46,6 +46,7 @@ host_stats_fields_attributes = api.model('HostStats', {
 _host_stats_fields_get = api.model('HostStatsFieldsGet', {
     'type': fields.String,
     'attributes': fields.Nested(host_stats_fields_attributes),
+    'id': fields.Integer(default=1)
 })
 
 
