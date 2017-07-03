@@ -134,7 +134,7 @@ containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithR
     'relationships': fields.Nested(api.model('ContainersRelationshipsPost', {
         'users': fields.Nested(api.model('ContainersDataPost', {
             'data': fields.Nested(api.model('ContainersPostData', {
-                'type': fields.String(pattern='users'),
+                'type': fields.String(pattern='users', default='users'),
                 'id': fields.Integer
             }), as_list=True)
         })),
@@ -142,18 +142,18 @@ containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithR
 })
 
 _containers_fields_get = api.inherit('ContainersFieldsGet', containers_fields_with_relationships_post_put, {
-    'type': fields.String,
+    'type': fields.String(default='containers'),
     'id': fields.Integer,
     'attributes': fields.Nested(containers_fields_attributes),
 })
 
 _containers_fields_post = api.inherit('ContainersFieldsPost', containers_fields_with_relationships_post_put, {
-    'type': fields.String(pattern='containers'),
+    'type': fields.String(pattern='containers', default='containers'),
     'attributes': fields.Nested(containers_fields_attributes_post),
 })
 
 _containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_with_relationships_post_put, {
-    'type': fields.String(pattern='containers'),
+    'type': fields.String(pattern='containers', default='containers'),
     'attributes': fields.Nested(containers_fields_attributes),
 })
 

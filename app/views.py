@@ -1167,7 +1167,6 @@ class HostStats(Resource):
 
         if not container:
             output = {
-                'type': 'stats',
                 'attributes': json_output
             }
         else:
