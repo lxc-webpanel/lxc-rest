@@ -219,6 +219,34 @@ def host_cpu_infos():
     return dict(name=name, cores=cores)
 
 
+def host_cpu_percent():
+    '''
+    returns CPU usage in percent
+    '''
+    f = open('/proc/stat', 'r')
+    line = f.readlines()[0]
+    data = line.split()
+    previdle = float(data[4])
+    prevtotal = float(data[1]) + float(data[2]) + float(data[3]) + \
+        float(data[4])
+    f.close()
+    time.sleep(0.3)
+    f = open('/proc/stat', 'r')
+    line = f.readlines()[0]
+    data = line.split()
+    idle = float(data[4])
+    total = float(data[1]) + float(data[2]) + float(data[3]) + float(data[4])
+    f.close()
+
+    intervaltotal = total - prevtotal
+    try:
+        percent = 100 * (intervaltotal - (idle - previdle)) / intervaltotal
+    except ZeroDivisionError:
+        percent = 0
+
+    return float('%.1f' % percent)
+
+
 def host_memory_usage():
     '''
     returns a dict of host memory usage values
