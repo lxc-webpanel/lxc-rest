@@ -1162,7 +1162,12 @@ class HostStats(Resource):
                 }
             },
             'adapters': adapters,
-            'kernel': platform.release()
+            'kernel': platform.release(),
+            'lxc': {
+                'version': lxc.version,
+                'lxcpath': lxc.get_global_config_item('lxc.lxcpath'),
+                'default_config': lxc.get_global_config_item('lxc.default_config')
+            }
         }
 
         if not container:

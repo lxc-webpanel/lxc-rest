@@ -40,7 +40,12 @@ host_stats_fields_attributes = api.model('HostStats', {
             'used': fields.Integer
         }))
     })),
-    'kernel': fields.String
+    'kernel': fields.String,
+    'lxc': fields.Nested(api.model('LXC', {
+        'version': fields.String,
+        'lxcpath': fields.String,
+        'default_config': fields.String
+    }))
 })
 
 _host_stats_fields_get = api.model('HostStatsFieldsGet', {
