@@ -1,21 +1,19 @@
----
 language: python
-python: "3.5"
-
+python: '3.5'
 sudo: required
 dist: trusty
-
 before_install:
-  - sudo add-apt-repository ppa:ubuntu-lxc/stable -y
-  - sudo apt-get update
-  - sudo apt-get install lxc lxc-dev python3-lxc -y
-
+- sudo add-apt-repository ppa:ubuntu-lxc/stable -y
+- sudo apt-get update
+- sudo apt-get install lxc lxc-dev python3-lxc -y
 addons:
   apt:
     packages:
     - python-dev
     - build-essential
-
 script:
-  - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
-  - python3 install/setup.py
+- pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
+- python3 install/setup.py
+notifications:
+  webhooks:
+    secure: zXyDaTIPb/CFecnYGnAiSiGohCKfpEcQwseoEsN6kUjruY6G//KUMLV4S8ItM5wQ9ZnxjRZPy2qcevhIkIiotOy6CCcnBkxtSm07eX6ocJCEUhY/ltOyxai7XEp8C7mUrvQ43fHoO3NSBxFRA7C7u0siQkng6QYRJs8WQBV0mwvWOZduRGni+6QDWaSGhjfpO5i/hu4zipDvNg9JD8ozY4QTtbeVpxtX1bcy87nlVftt0CY2e6M6r8cbO8sZygyYPv+Sv+KXJjYv/CE1FoI4E73LCcaKxNjFpq3bZq8AP18HDjm6LItVyRAFHtrNAXGv7Tp1pTcXxRahsfpRXmVEvbWSEphO64ImR8m8CzvUkD9Lf3sfaCn6xFjmDjMQjKLBf/Cjwir9NKydIN5rBErUqNglMLx/xRpS9Gvp0rR0lgHB3/lKIpZuL/rPbwqyjvlSifpHkWxBGdTTOb+1YIDYjTL7Xhjs7agCnUSXRdvly+kSlcAZFCYOTUH32+WDxWQWYlhwlVbSIkdrvANAvJcQE3+AGhE83uE4X+ZFnykjt1EnVvSrZxbybS36O0CzO2ML4aa6H8uQ/fverNXFYgH3X35PkAWZKsGcFNXjMMly/jPXZmseaMn7hvLWxm4LDcaToUdtgWWMWHYi+iTFcqv4n874KDXFqd7C6w0O3vUI1IU=
