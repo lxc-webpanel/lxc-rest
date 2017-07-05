@@ -130,6 +130,11 @@ containers_fields_attributes_post = api.model('ContainersFieldsAttributesPost', 
     'lxc': fields.Nested(lxc_container_conf)
 })
 
+containers_fields_attributes_put = api.model('ContainersFieldsAttributesPut', {
+    'name': fields.String,
+    'lxc': fields.Nested(lxc_container_conf)
+})
+
 containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithRelationshipsPost', {
     'relationships': fields.Nested(api.model('ContainersRelationshipsPost', {
         'users': fields.Nested(api.model('ContainersDataPost', {
@@ -154,7 +159,7 @@ _containers_fields_post = api.inherit('ContainersFieldsPost', containers_fields_
 
 _containers_fields_put = api.inherit('ContainersFieldsPut', containers_fields_with_relationships_post_put, {
     'type': fields.String(pattern='containers', default='containers'),
-    'attributes': fields.Nested(containers_fields_attributes),
+    'attributes': fields.Nested(containers_fields_attributes_put),
 })
 
 
