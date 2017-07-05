@@ -877,6 +877,11 @@ class ContainersStart(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_start')
+    @api.doc(responses={
+        204: 'Container started',
+        404: 'Container doesn\'t exists',
+        500: 'Start timed out'
+    })
     def post(self, id):
         """
         Start container
@@ -899,6 +904,11 @@ class ContainersFreeze(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_freeze')
+    @api.doc(responses={
+        204: 'Container frozen',
+        404: 'Container doesn\'t exists',
+        500: 'Freeze timed out'
+    })
     def post(self, id):
         """
         Freeze container
@@ -921,6 +931,11 @@ class ContainersUnfreeze(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_unfreeze')
+    @api.doc(responses={
+        204: 'Container thawed',
+        404: 'Container doesn\'t exists',
+        500: 'Unfreeze timed out'
+    })
     def post(self, id):
         """
         Unfreeze container
@@ -943,6 +958,11 @@ class ContainersStop(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_stop')
+    @api.doc(responses={
+        204: 'Container stopped',
+        404: 'Container doesn\'t exists',
+        500: 'Stop timed out'
+    })
     def post(self, id):
         """
         Stop container
@@ -965,6 +985,11 @@ class ContainersShutdown(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_stop')
+    @api.doc(responses={
+        204: 'Container stopped',
+        404: 'Container doesn\'t exists',
+        500: 'Shutdown timed out'
+    })
     def post(self, id):
         """
         Shutdown container
@@ -987,6 +1012,11 @@ class ContainersRestart(Resource):
     decorators = [jwt_required]
 
     @user_has('ct_restart')
+    @api.doc(responses={
+        204: 'Container restarted',
+        404: 'Container doesn\'t exists',
+        500: 'Restart timed out'
+    })
     def post(self, id):
         """
         Restart container
