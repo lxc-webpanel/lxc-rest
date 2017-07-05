@@ -118,6 +118,7 @@ containers_fields_attributes = api.model('ContainersFieldsAttributes', {
     'name': fields.String,
     'pid': fields.Integer,
     'state': fields.String,
+    'ips': fields.List(fields.String),
     'lxc': fields.Nested(lxc_container_conf)
 })
 
