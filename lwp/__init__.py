@@ -105,6 +105,7 @@ def ct_infos(container):
         'pid': c.init_pid,
         'state': c.state,
         'ips': c.get_ips(),
+        'config_path': c.get_config_path()
         'lxc': {
             'aa_allow_incomplete': get_config(c, 'lxc.aa_allow_incomplete', default=0),
             'aa_profile': get_config(c, 'lxc.aa_profile'),
