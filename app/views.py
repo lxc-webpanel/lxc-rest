@@ -23,6 +23,7 @@ import gzip
 import socket
 import subprocess
 import psutil
+from distro import linux_distribution
 
 
 class Auth(Resource):
@@ -1170,7 +1171,7 @@ class HostStats(Resource):
         json_output = {
             'uptime': lwp.host_uptime(),
             'hostname': socket.gethostname(),
-            'distrib': ' '.join(platform.dist()),
+            'distrib': ' '.join(linux_distribution()),
             'disk': disk_partitions_usage,
             'cpu': {
                 'usage': cpu_percent,
