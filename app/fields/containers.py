@@ -141,7 +141,7 @@ containers_fields_with_relationships_post_put = api.model('ContainersFieldsWithR
     'relationships': fields.Nested(api.model('ContainersRelationshipsPost', {
         'users': fields.Nested(api.model('ContainersDataPost', {
             'data': fields.Nested(api.model('ContainersPostData', {
-                'type': fields.String(pattern='users'),
+                'type': fields.String,
                 'id': fields.Integer
             }), as_list=True)
         })),

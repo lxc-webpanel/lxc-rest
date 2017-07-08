@@ -31,13 +31,13 @@ users_fields_with_relationships_post_put = api.model('UsersFieldsWithRelationshi
     'relationships': fields.Nested(api.model('UsersRelationshipsPost', {
         'groups': fields.Nested(api.model('GroupsDataPost', {
             'data': fields.Nested(api.model('GroupsPostData', {
-                'type': fields.String(pattern='groups'),
+                'type': fields.String,
                 'id': fields.Integer
             }), as_list=True)
         })),
         'containers': fields.Nested(api.model('ContainersDataPost', {
             'data': fields.Nested(api.model('ContainersPostData', {
-                'type': fields.String(pattern='containers'),
+                'type': fields.String,
                 'id': fields.Integer
             }), as_list=True)
         }))
