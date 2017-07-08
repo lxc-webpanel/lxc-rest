@@ -112,7 +112,7 @@ db = SQLAlchemy(
     }
 )
 
-api = Api(
+api = ExceptionAwareApi(
     app,
     doc='/doc/',
     license='MIT',
