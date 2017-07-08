@@ -15,9 +15,9 @@ lxc_container_conf = api.model('LxcContainerConf', {
     })),
     'cgroup': fields.Nested(api.model('LxcCgroup', {
         'memory': fields.Nested(api.model('LxcCgroupMemory', {
-            'limit_in_bytes': fields.Integer,
+            'limit_in_bytes': fields.List(fields.String),
             'memsw': fields.Nested(api.model('LxcCgroupMemoryMemsw', {
-                'limit_in_bytes': fields.Integer
+                'limit_in_bytes': fields.List(fields.String)
             }))
         })),
         'cpu': fields.Nested(api.model('LxcCgroupCpu', {
@@ -104,9 +104,9 @@ lxc_container_conf = api.model('LxcContainerConf', {
     'se_context': fields.String,
     'seccomp': fields.String,
     'start': fields.Nested(api.model('LxcStart', {
-        'auto': fields.Integer(default=0),
-        'delay': fields.Integer(default=None),
-        'order': fields.Integer(default=None)
+        'auto': fields.String(default='0'),
+        'delay': fields.String(default=None),
+        'order': fields.String(default=None)
     })),
     'stopsignal': fields.String(default='SIGKILL'),
     'syslog': fields.String,

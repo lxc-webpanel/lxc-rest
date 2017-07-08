@@ -123,9 +123,9 @@ def ct_infos(container):
                     'cpus': get_config(c, 'lxc.cgroup.cpuset.cpus', default=[])
                 },
                 'memory': {
-                    'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.limit_in_bytes'),
+                    'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.limit_in_bytes', default=[]),
                     'memsw': {
-                        'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes')
+                        'limit_in_bytes': get_config(c, 'lxc.cgroup.memory.memsw.limit_in_bytes', default=[])
                     }
                 }
             },
