@@ -10,6 +10,9 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install lxc lxc-dev python3-lxc -y
 
+install:
+  - pip install codecov
+
 addons:
   apt:
     packages:
@@ -18,7 +21,10 @@ addons:
 
 script:
   - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
-  - python3 install/setup.py
+  - coverage run tests.py
+
+after_success:
+  - codecov
 
 notifications:
   webhooks:

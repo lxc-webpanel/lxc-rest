@@ -5,6 +5,7 @@ RESTful API for LXC
 Use it with [Dashboard](https://github.com/lxc-webpanel/dashboard)
 
 [![Build Status](https://travis-ci.org/lxc-webpanel/lxc-rest.svg?branch=master)](https://travis-ci.org/lxc-webpanel/lxc-rest)
+[![codecov](https://codecov.io/gh/lxc-webpanel/lxc-rest/branch/master/graph/badge.svg)](https://codecov.io/gh/lxc-webpanel/lxc-rest)
 [![Python version](https://img.shields.io/badge/Python-3.5-blue.svg)](https://www.python.org/downloads/release/python-350/)
 
 ---
