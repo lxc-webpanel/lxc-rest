@@ -4,8 +4,7 @@ import sys
 sys.path.append('../')
 import os
 
-from app import app
-from app.models import *
+from app import app, db
 from install import populate_db
 
 import unittest
@@ -31,12 +30,6 @@ class AppTestCase(unittest.TestCase):
         os.close(self.db_fd)
         os.unlink(app.config['DATABASE'])
 
-    def test_user_admin_from_db(self):
-        users = User.query.all()
-        self.assertEqual(len(users), 1)
-        self.assertEqual(users[0].username, 'admin')
-        self.assertTrue(users[0].verify_password('admin'))
-
     def test_get_auth(self):
         rv = self.app.post('/api/v1/auth', data=json.dumps({
             'username': 'admin',
@@ -47,6 +40,35 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertIn('access_token', rj)
         self.__class__.token = rj['access_token']
+
+    def test_get_auth_refresh(self):
+        rv = self.app.post(
+            '/api/v1/auth/refresh', headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('access_token', rj)
+
+    def test_get_auth_check(self):
+        rv = self.app.get(
+            '/api/v1/auth/check', headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rj, {})
+
+    def test_get_auth_check_wrong_token(self):
+        rv = self.app.get(
+            '/api/v1/auth/check', headers={
+                'Authorization': 'Bearer ODAZHIJDIOAZN'
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 422)
 
     def test_get_lwp_users(self):
         rv = self.app.get(
@@ -80,6 +102,11 @@ class AppTestCase(unittest.TestCase):
             '/api/v1/lwp/users/1',
             data=json.dumps({
                 "data": {
+                    "relationships": {
+                        "groups": {
+                            "data": []
+                        }
+                    },
                     "attributes": {
                         "admin": False,
                         "email": "elie@deloumeau.fr",
@@ -121,6 +148,16 @@ class AppTestCase(unittest.TestCase):
             '/api/v1/lwp/users',
             data=json.dumps({
                 "data": {
+                    "relationships": {
+                        "groups": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "groups"
+                            }
+                            ]
+                        }
+                    },
                     "attributes": {
                         "admin": False,
                         "email": "test@test.test",
@@ -165,6 +202,11 @@ class AppTestCase(unittest.TestCase):
             '/api/v1/lwp/me',
             data=json.dumps({
                 "data": {
+                    "relationships": {
+                        "groups": {
+                            "data": []
+                        }
+                    },
                     "attributes": {
                         "admin": False,
                         "email": "elie@deloumeau.fr",
@@ -230,6 +272,28 @@ class AppTestCase(unittest.TestCase):
             '/api/v1/lwp/groups/1',
             data=json.dumps({
                 "data": {
+                    "relationships": {
+                        "abilities": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "abilities"
+                            },
+                            {
+                                "id": 5,
+                                "type": "abilities"
+                            }
+                            ]
+                        },
+                        "users": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "users"
+                            }
+                            ]
+                        }
+                    },
                     "attributes": {
                         "name": "admin-test",
                     },
@@ -260,6 +324,28 @@ class AppTestCase(unittest.TestCase):
             '/api/v1/lwp/groups',
             data=json.dumps({
                 "data": {
+                    "relationships": {
+                        "abilities": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "abilities"
+                            },
+                            {
+                                "id": 5,
+                                "type": "abilities"
+                            }
+                            ]
+                        },
+                        "users": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "users"
+                            }
+                            ]
+                        }
+                    },
                     "attributes": {
                         "name": "test"
                     },
@@ -276,6 +362,71 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(rj['data']['id'], 2)
         self.assertEqual(rj['data']['attributes']['name'], 'test')
         self.assertEqual(rj['data']['type'], 'groups')
+
+    def test_get_lwp_abilities(self):
+        rv = self.app.get(
+            '/api/v1/lwp/abilities', headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rj['data']), 27)
+        self.assertEqual(rj['data'][0]['id'], 1)
+        self.assertEqual(rj['data'][0]['type'], 'abilities')
+
+    def test_get_lwp_abilities_1(self):
+        rv = self.app.get(
+            '/api/v1/lwp/abilities/1', headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rj['data']['id'], 1)
+        self.assertEqual(rj['data']['attributes']['name'], 'users_infos_all')
+        self.assertEqual(rj['data']['type'], 'abilities')
+
+    def test_put_lwp_abilities_1(self):
+        rv = self.app.put(
+            '/api/v1/lwp/abilities/1',
+            data=json.dumps({
+                "data": {
+                    "relationships": {
+                        "groups": {
+                            "data": [
+                            {
+                                "id": 1,
+                                "type": "groups"
+                            }
+                            ]
+                        }
+                    },
+                    "type": "abilities"
+                }
+            }),
+            content_type='application/json',
+            headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rj['data']['id'], 1)
+        self.assertEqual(rj['data']['attributes']['name'], 'users_infos_all')
+        self.assertEqual(rj['data']['type'], 'abilities')
+
+    def test_get_lwp_host(self):
+        rv = self.app.get(
+            '/api/v1/lwp/host', headers={
+                'Authorization': 'Bearer %s' % self.__class__.token
+            })
+        rj = json.loads(rv.get_data(as_text=True))
+
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rj['data']['id'], 1)
+        self.assertIn('Ubuntu', rj['data']['attributes']['distrib'])
+        self.assertEqual(rj['data']['type'], 'stats')
 
 
 if __name__ == '__main__':
