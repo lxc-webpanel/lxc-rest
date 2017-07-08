@@ -33,8 +33,9 @@ class Auth(Resource):
         """
         Get Json Web Token
         """
-        username = request.json.get('username', None)
-        password = request.json.get('password', None)
+        request_data = request.get_json()
+        username = request_data['username']
+        password = request_data['password']
 
         user = User.query.filter_by(username=username).first()
 
