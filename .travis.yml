@@ -11,6 +11,7 @@ before_install:
   - sudo apt-get install lxc lxc-dev python3-lxc -y
 
 install:
+  - pip install -r requirements.txt
   - pip install codecov
 
 addons:
