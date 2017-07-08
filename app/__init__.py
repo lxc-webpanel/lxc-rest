@@ -38,6 +38,7 @@ except KeyError:
 app.config['JWT_AUTH_URL_RULE'] = '/api/v1/auth'
 app.config['JWT_AUTH_HEADER_PREFIX'] = app.config['JWT_HEADER_TYPE']
 
+
 class ExceptionAwareApi(Api):
 
     def handle_error(self, e):
@@ -45,7 +46,8 @@ class ExceptionAwareApi(Api):
             code = 401
             data = {
                 'errors': [{
-                    'details': 'Authorization Required. Request does not contain an access token',
+                    'details': 'Authorization Required. \
+                    Request does not contain an access token',
                     'status': str(code),
                     'title': 'Unauthorized'
                 }]
@@ -63,7 +65,7 @@ class ExceptionAwareApi(Api):
             code = 500
             data = {
                 'errors': [{
-                    'details': 'Can\'t read JSON' ,
+                    'details': 'Can\'t read JSON',
                     'status': str(code),
                     'title': 'Internal server error'
                 }]
@@ -96,16 +98,45 @@ class ExceptionAwareApi(Api):
             raise
 
 
-cors = CORS(app, resources={r'/*': {'origins': app.config['ALLOW_ORIGIN']}})
-db = SQLAlchemy(app, session_options={
-                'autoflush': False, 'autocommit': False, "expire_on_commit": False})
-api = ExceptionAwareApi(app, doc='/doc/', license='MIT', title='LXC Web Panel API documentation',
-                        description='https://github.com/lxc-webpanel/lxc-rest', validate=True,
-                        default_mediatype=u'application/json')
-auth = api.namespace('api/v1/', description='Authentication')
-nslxc = api.namespace('api/v1/lxc/', description='Operations related to LXC')
+cors = CORS(
+    app,
+    resources={r'/*': {'origins': app.config['ALLOW_ORIGIN']}}
+)
+
+db = SQLAlchemy(
+    app,
+    session_options={
+        'autoflush': False,
+        'autocommit': False,
+        'expire_on_commit': False
+    }
+)
+
+api = ExceptionAwareApi(
+    app,
+    doc='/doc/',
+    license='MIT',
+    title='LXC Web Panel API documentation',
+    description='https://github.com/lxc-webpanel/lxc-rest',
+    validate=True,
+    default_mediatype=u'application/json'
+)
+
+auth = api.namespace(
+    'api/v1/',
+    description='Authentication'
+)
+
+nslxc = api.namespace(
+    'api/v1/lxc/',
+    description='Operations related to LXC'
+)
+
 nslwp = api.namespace(
-    'api/v1/lwp/', description='Operations related to LXC Web Panel')
+    'api/v1/lwp/',
+    description='Operations related to LXC Web Panel'
+)
+
 jwt = flask_jwt_extended.JWTManager(app)
 
 from app import handlers, models, views, routes
