@@ -1001,7 +1001,7 @@ class ContainersShutdown(Resource):
         c = lxc.Container(container.name)
 
         if c.defined and (id in current_identity.containers or current_identity.admin):
-            c.shutdown(10)
+            c.shutdown(30)
             if c.wait('STOPPED', 30):
                 return {}, 204
             else:
