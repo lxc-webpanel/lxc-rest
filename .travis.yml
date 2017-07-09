@@ -21,7 +21,7 @@ addons:
     - build-essential
 
 script:
-  - sudo pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
+  - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
   - sudo coverage run tests.py
 
 after_success:
