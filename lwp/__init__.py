@@ -192,22 +192,6 @@ def ct_infos(container):
     return infos
 
 
-def host_disk_usage(partition='/'):
-    '''
-    returns a dict of disk usage values in megabytes
-    '''
-    usage = _run('df -m %s | tail -n -1' % partition,
-                 output=True).decode("utf-8").split()
-
-    return {
-        'disk': usage[0],
-        'total': int(usage[1]),
-        'used': int(usage[2]),
-        'free': int(usage[3]),
-        'percent': int(usage[4].strip('%'))
-        }
-
-
 def host_cpu_infos():
     f = open('/proc/cpuinfo', 'r')
     l = f.read()
@@ -249,52 +233,6 @@ def host_cpu_percent():
     return float('%.1f' % percent)
 
 
-def host_memory_usage():
-    '''
-    returns a dict of host memory usage values
-                    {'percent': int((used/total)*100),
-                    'percent_cached':int((cached/total)*100),
-                    'swap': int(swap/1024),
-                    'used': int(used/1024),
-                    'total': int(total/1024)}
-    '''
-    out = open('/proc/meminfo', 'r')
-    total = free = buffers = cached = 0
-    for line in out:
-        if 'MemTotal:' == line.split()[0]:
-            split = line.split()
-            total = float(split[1])
-        if 'MemFree:' == line.split()[0]:
-            split = line.split()
-            free = float(split[1])
-        if 'Buffers:' == line.split()[0]:
-            split = line.split()
-            buffers = float(split[1])
-        if 'Cached:' == line.split()[0]:
-            split = line.split()
-            cached = float(split[1])
-        if 'SwapTotal:' == line.split()[0]:
-            split = line.split()
-            swap_total = float(split[1])
-        if 'SwapFree:' == line.split()[0]:
-            split = line.split()
-            swap_free = float(split[1])
-        if 'SwapCached:' == line.split()[0]:
-            split = line.split()
-            swap_cached = float(split[1])
-
-    out.close()
-    used = (total - (free + buffers + cached))
-    swap_used = (swap_total - (swap_free + swap_cached))
-    return {'percent': int(used * 100 / total),
-            'percent_cached': int(cached * 100 / total),
-            'swap_percent': int(swap_used * 100 / swap_total),
-            'swap_used': int(swap_used / 1024),
-            'swap_total': int(swap_total / 1024),
-            'used': int(used / 1024),
-            'total': int(total / 1024)}
-
-
 def host_uptime():
     '''
     returns a dict of the system uptime
@@ -310,68 +248,3 @@ def host_uptime():
             'hours': hours,
             'minutes': minutes,
             'seconds': seconds}
-
-
-def host_kernel_verion():
-    uname = platform.uname()
-    data = '%s %s %s' % (uname[0], uname[2], uname[3])
-    return data
-
-
-def get_templates_list():
-    '''
-    returns a sorted lxc templates list
-    '''
-    templates = []
-    path = None
-
-    templates_path = '/usr/share/lxc/templates'
-    if os.path.exists(templates_path) and os.path.isdir(templates_path):
-        path = os.listdir(templates_path)
-    else:
-        templates_path = '/usr/lib/lxc/templates'  # Compat
-        if os.path.exists(templates_path) and os.path.isdir(templates_path):
-            path = os.listdir(templates_path)
-
-    if path:
-        for line in path:
-            templates.append(line.replace('lxc-', ''))
-
-    return sorted(templates)
-
-
-def get_template_options(template):
-    '''
-    Get lxc template options: arch & releases
-    '''
-    result = {
-        "arch": [],
-        "releases": [],
-        "system": {
-            "arch": platform.machine(),
-            "release": platform.linux_distribution()[2],
-        }
-    }
-
-    # XXX: some distros arch not equal to system arch...
-    # Dunno what to do, maybe aliases in templates.conf...
-    if result["system"]["arch"] == "x86_64":
-        if platform.linux_distribution()[0] in ('Debian', 'Ubuntu'):
-            result["system"]["arch"] = 'amd64'
-
-    if not os.path.isfile('templates.conf'):
-        return result
-
-    config = configparser.SafeConfigParser(allow_no_value=True)
-    config.readfp(open('templates.conf'))
-
-    if config.has_section(template):
-        if config.has_option(template, 'releases'):
-            result['releases'].extend(config.get(
-                template, 'releases').split(','))
-    elif config.has_section('default'):
-        if config.has_option('default', 'releases'):
-            result['releases'].extend(config.get(
-                'default', 'releases').split(','))
-
-    return result
