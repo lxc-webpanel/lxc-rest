@@ -22,7 +22,7 @@ addons:
 
 script:
   - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
-  - coverage run tests.py
+  - sudo coverage run tests.py
 
 after_success:
   - codecov
