@@ -22,7 +22,7 @@ addons:
 
 script:
   - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
-  - sudo sh -c "source /home/travis/virtualenv/python3.5/bin/activate; coverage run tests.py"
+  - sudo sh -c ". /home/travis/virtualenv/python3.5/bin/activate; coverage run tests.py"
 
 after_success:
   - codecov
