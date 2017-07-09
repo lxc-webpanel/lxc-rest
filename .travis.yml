@@ -11,8 +11,8 @@ before_install:
   - sudo apt-get install lxc lxc-dev python3-lxc -y
 
 install:
-  - sudo pip install -r requirements.txt
-  - sudo pip install codecov
+  - sudo -H pip install -r requirements.txt
+  - sudo -H pip install codecov
 
 addons:
   apt:
@@ -21,8 +21,8 @@ addons:
     - build-essential
 
 script:
-  - pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
-  - sudo coverage run tests.py
+  - sudo -H pip install git+https://github.com/lxc/lxc.git#subdirectory=src/python-lxc
+  - sudo -H coverage run tests.py
 
 after_success:
   - codecov
