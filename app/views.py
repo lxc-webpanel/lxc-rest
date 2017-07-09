@@ -870,7 +870,7 @@ class ContainersClone(Resource):
                         user.containers.append(container.id)
                         db.session.commit()
 
-                        return Containers.get(self, container.id)
+                        return Containers.get(self, container.id), 201
 
             api.abort(code=404, message='Container doesn\'t exists')
 
