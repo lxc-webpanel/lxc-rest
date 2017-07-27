@@ -247,4 +247,5 @@ def host_uptime():
     return {'days': days,
             'hours': hours,
             'minutes': minutes,
-            'seconds': seconds}
+            'seconds': seconds,
+            'total_seconds': td.total_seconds()}

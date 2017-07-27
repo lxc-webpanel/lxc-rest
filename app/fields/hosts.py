@@ -9,7 +9,8 @@ host_stats_fields_attributes = api.model('HostStats', {
         'days': fields.Integer,
         'hours': fields.Integer,
         'minutes': fields.Integer,
-        'seconds': fields.Integer
+        'seconds': fields.Integer,
+        'total_seconds': fields.Integer
     })),
     'hostname': fields.String,
     'distrib': fields.String,
